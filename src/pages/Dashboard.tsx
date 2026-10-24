@@ -43,7 +43,7 @@ export default function Dashboard() {
 
   return (
     <main className="mx-auto max-w-6xl p-6">
-      <h1 className="text-2xl font-bold">증빙 현황판 (0단계 확인용)</h1>
+      <h1 className="text-2xl font-bold">증빙 현황판</h1>
       <p className="mt-1 text-sm text-gray-600">
         집행 {rows.length}건 · 증빙 {docs.length}개 — ✅ {count('submitted')} · ⏳ {count('scheduled')} · ❌ {count('missing')}
       </p>
