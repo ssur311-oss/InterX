@@ -1,0 +1,5 @@
+@import "tailwindcss";
+
+body {
+  font-family: "Pretendard", "Malgun Gothic", system-ui, sans-serif;
+}
