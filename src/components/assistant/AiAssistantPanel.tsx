@@ -1,10 +1,28 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { AiAssistantCharacter, type MoniState } from './AiAssistantCharacter'
 import { FeaturePanel } from './FeaturePanel'
 import { FEATURES, type FeatureKey } from './features'
 
 type Phase = 'idle' | 'menu' | 'feature'
+type Rect = { left: number; top: number; width: number; height: number }
+
+const MOVE_MS = 460
+const SMALL = { width: 232, height: 200, gap: 16 }
+
+/**
+ * 모니 상자 위치·크기 (무대 안 CSS px).
+ * 큰 상태와 작은 상태를 같은 네 값(left·top·width·height)으로 나타내야 한 번의 전환으로 이어진다.
+ * 예전에는 큰 상태는 top/left 50% + translate, 작은 상태는 right/bottom이라 위치가 중간에 툭 바뀌었다
+ */
+function moniRect(small: boolean, W: number, H: number): Rect {
+  if (small) return { left: W - SMALL.gap - SMALL.width, top: H - SMALL.gap - SMALL.height, width: SMALL.width, height: SMALL.height }
+  // 기존 화면 비율 그대로: 휴대폰은 94%×44%, 640px 이상은 최대 600×380
+  const sm = window.matchMedia('(min-width: 640px)').matches
+  const width = sm ? Math.min(600, W * 0.94) : W * 0.94
+  const height = sm ? Math.min(380, H * 0.58) : H * 0.44
+  return { left: (W - width) / 2, top: H / 2 - height * (sm ? 0.38 : 0.52), width, height }
+}
 
 function usePrefersReducedMotion() {
   const [reduced] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
@@ -34,18 +52,54 @@ export function AiAssistantPanel() {
   }, [])
   useEffect(() => () => window.clearTimeout(moodTimer.current), [])
 
+  // 무대 크기를 재서 모니 상자 위치를 px로 계산한다 (창 크기가 바뀌면 다시 잼)
+  const stage = useRef<HTMLDivElement>(null)
+  const [stageSize, setStageSize] = useState<{ w: number; h: number } | null>(null)
+  useLayoutEffect(() => {
+    const el = stage.current
+    if (!el) return
+    const measure = () => setStageSize((cur) => (cur && cur.w === el.clientWidth && cur.h === el.clientHeight ? cur : { w: el.clientWidth, h: el.clientHeight }))
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  // 크기 전환 중인지. 이전 전환의 늦은 완료가 새 전환을 덮어쓰지 않도록 번호로 확인한다
+  const [moving, setMoving] = useState(false)
+  const moveToken = useRef(0)
+  const moveTimer = useRef<number | undefined>(undefined)
+  useEffect(() => () => window.clearTimeout(moveTimer.current), [])
+  function changePhase(next: Phase) {
+    if (!reduced && (next === 'feature') !== (phase === 'feature')) {
+      const token = ++moveToken.current
+      setMoving(true)
+      window.clearTimeout(moveTimer.current)
+      moveTimer.current = window.setTimeout(() => {
+        if (moveToken.current === token) setMoving(false)
+      }, MOVE_MS + 60)
+    }
+    setPhase(next)
+  }
+
   const small = phase === 'feature'
+  const rect = stageSize ? moniRect(small, stageSize.w, stageSize.h) : null
+  // 전환 중에만 움직임을 켠다 (창 크기를 바꿀 때는 바로 따라가게)
+  const boxStyle: CSSProperties | undefined = rect ? {
+    ...rect,
+    transition: moving ? ['left', 'top', 'width', 'height'].map((p) => `${p} ${MOVE_MS}ms cubic-bezier(0.65, 0, 0.35, 1)`).join(', ') : 'none',
+  } : undefined
   const feature = FEATURES.find((f) => f.key === picked)
   // 상태 우선순위: 작업 결과(mood) > 마우스를 올려 둠(listening) > 기본
   const state: MoniState = mood !== 'idle' ? mood : hover && !small ? 'listening' : 'idle'
 
   function onCharacterClick() {
     if (phase === 'menu') {
-      setPhase('idle')
+      changePhase('idle')
       setPicked(null)
       return
     }
-    setPhase('menu')
+    changePhase('menu')
     react('greeting', 2400)
   }
 
@@ -55,19 +109,16 @@ export function AiAssistantPanel() {
   }
 
   return (
-    <div className="glass relative h-[640px] overflow-hidden rounded-3xl md:h-auto md:min-h-0 md:flex-1">
+    <div ref={stage} className="glass relative h-[640px] overflow-hidden rounded-3xl md:h-auto md:min-h-0 md:flex-1">
       {small && picked && (
         <div className="absolute inset-4 right-4 bottom-4 md:right-64">
-          <FeaturePanel feature={picked} onBack={() => setPhase('menu')} onMood={react} />
+          <FeaturePanel feature={picked} onBack={() => changePhase('menu')} onMood={react} />
         </div>
       )}
 
-      {/* 모니: 평소엔 가운데 크게, 작업 화면이 열리면 오른쪽 아래로 작게 */}
-      <div
-        className={`absolute transition-all duration-500 ease-out motion-reduce:transition-none ${small ? '' :
-          'top-1/2 left-1/2 h-[44%] w-[94%] -translate-x-1/2 -translate-y-[52%] sm:h-[min(380px,58%)] sm:w-[min(600px,94%)] sm:-translate-y-[38%]'}`}
-        style={small ? { right: 16, bottom: 16, width: 232, height: 200 } : undefined}
-      >
+      {/* 모니: 평소엔 가운데 크게, 작업 화면이 열리면 오른쪽 아래로 작게.
+          같은 캐릭터(같은 캔버스)가 위치·크기만 바꾼다 */}
+      <div className="absolute" style={boxStyle}>
         {/* 말풍선 */}
         {!small && (
           <div role="status" key={`${phase}-${picked}`}
@@ -77,7 +128,7 @@ export function AiAssistantPanel() {
             {phase === 'menu' && feature && (
               <>
                 {feature.say}
-                <button onClick={() => setPhase('feature')} className="mt-2 flex min-h-11 items-center gap-1 font-semibold text-brand hover:underline">
+                <button onClick={() => changePhase('feature')} className="mt-2 flex min-h-11 items-center gap-1 font-semibold text-brand hover:underline">
                   {feature.go} <ArrowRight aria-hidden size={16} />
                 </button>
               </>
@@ -86,11 +137,11 @@ export function AiAssistantPanel() {
           </div>
         )}
 
-        <button onClick={small ? () => setPhase('menu') : onCharacterClick}
+        <button onClick={small ? () => changePhase('menu') : onCharacterClick}
           onPointerEnter={() => setHover(true)} onPointerLeave={() => setHover(false)}
           aria-label={small ? '모니에게 돌아가기' : phase === 'menu' ? '모니 메뉴 닫기' : '모니 누르기'}
           className="block h-full w-full cursor-pointer rounded-3xl">
-          <AiAssistantCharacter state={state} paused={paused} showStatus={false} className="h-full w-full" />
+          <AiAssistantCharacter state={state} paused={paused} moving={moving} showStatus={false} className="h-full w-full" />
         </button>
 
         {/* 기능 버튼: 흰 동그라미 + 남색 선·보라 포인트 아이콘 */}
