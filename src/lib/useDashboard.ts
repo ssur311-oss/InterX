@@ -39,6 +39,7 @@ export function useDashboard() {
   const [expenses, setExpenses] = useState<DashExpense[]>([])
   const [projects, setProjects] = useState<ProjectWithDeadline[]>([])
   const [people, setPeople] = useState<Person[]>([])
+  const [settings, setSettings] = useState<Setting[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const today = todaySeoul()
@@ -83,6 +84,7 @@ export function useDashboard() {
     setExpenses(rows)
     setProjects(projectList)
     setPeople((pe.data ?? []) as Person[])
+    setSettings((st.data ?? []) as Setting[])
     setError(null)
     setLoading(false)
   }, [today])
@@ -91,5 +93,5 @@ export function useDashboard() {
     reload()
   }, [reload])
 
-  return { expenses, projects, people, today, error, loading, reload }
+  return { expenses, projects, people, settings, today, error, loading, reload }
 }

@@ -28,6 +28,11 @@ export function todaySeoul(): string {
   return seoulParts(new Date().toISOString()).date
 }
 
+/** from에서 to까지 며칠 남았는지 ('YYYY-MM-DD' 기준, 지났으면 음수) */
+export function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS)
+}
+
 /** 'YYYY-MM-DD'에 n일 더하기 (음수면 빼기) */
 export function addDays(date: string, n: number): string {
   return new Date(new Date(`${date}T00:00:00Z`).getTime() + n * DAY_MS).toISOString().slice(0, 10)

@@ -3,6 +3,7 @@ import type { Session } from '@supabase/supabase-js'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 import { Layout } from './components/Layout'
+import Calendar from './pages/Calendar'
 import Dashboard from './pages/Dashboard'
 import Login from './pages/Login'
 import Settings from './pages/Settings'
@@ -42,6 +43,7 @@ export default function App() {
       <Routes>
         <Route element={<Layout email={session.user.email ?? ''} />}>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/calendar" element={<Calendar />} />
           <Route path="/upload" element={<Upload />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,5 +1,96 @@
 @import "tailwindcss";
 
-body {
-  font-family: "Pretendard", "Malgun Gothic", system-ui, sans-serif;
+/* 디자인 토큰 — design/wireframe-plan.md "디자인 토큰" 기준 */
+@theme {
+  --color-brand: #2d5bff;
+  --color-canvas: #f5f7fa;
+  --color-ink: #111111;
+  --color-body: #444444;
+  --color-line: #dddddd;
+  --color-danger: #e53935;
+  --color-ok: #2e7d32;
+  --color-warn: #ffb800;
+  --font-sans: "Pretendard", "Malgun Gothic", system-ui, sans-serif;
 }
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+/* 키보드로 이동할 때 초점이 잘 보이게 */
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 3px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+/* FullCalendar를 와이어프레임 달력 모양에 맞춘다 */
+.fc {
+  --fc-border-color: var(--color-line);
+  --fc-today-bg-color: transparent;
+  --fc-neutral-bg-color: var(--color-canvas);
+  --fc-page-bg-color: #ffffff;
+  font-size: 13px;
+}
+.fc .fc-col-header-cell {
+  background: var(--color-canvas);
+  font-weight: 500;
+  color: var(--color-body);
+  padding: 8px 0;
+}
+.fc .fc-daygrid-day-frame {
+  min-height: 112px;
+  cursor: pointer;
+}
+.fc .fc-daygrid-day-number {
+  color: var(--color-ink);
+  font-weight: 600;
+  padding: 8px;
+}
+.fc .fc-day-today .fc-daygrid-day-number {
+  box-shadow: inset 0 -2px var(--color-brand);
+}
+.fc .fc-day-sun .fc-daygrid-day-number,
+.fc .is-holiday .fc-daygrid-day-number {
+  color: var(--color-danger);
+}
+.fc .is-selected {
+  box-shadow: inset 0 0 0 2px var(--color-brand);
+}
+.fc .fc-daygrid-event {
+  white-space: normal;
+  border-radius: 0;
+  margin: 1px 4px;
+}
+.fc {
+  --fc-event-bg-color: transparent;
+  --fc-event-border-color: transparent;
+  --fc-event-text-color: var(--color-ink);
+}
+.fc .ev {
+  background: var(--color-canvas);
+  border: 0;
+  border-left: 3px solid var(--color-body);
+  padding: 2px 4px;
+  font-size: 11px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.fc .ev-settlement { border-left-color: var(--color-ink); font-weight: 700; }
+.fc .ev-deadline { border-left-color: var(--color-brand); background: #eaf0ff; font-weight: 700; }
+.fc .ev-remind { border-left-color: #9e9e9e; }
+.fc .ev-remind .fc-event-main { color: var(--color-body); }
+.fc .ev-overdue { border-left-color: var(--color-danger); background: #fdecea; }
+.fc .ev-over_deadline { border-left-color: var(--color-warn); background: #fff6db; }
+.fc .fc-toolbar-title { font-size: 20px; font-weight: 700; }
+.fc .fc-button {
+  background: #fff;
+  color: var(--color-ink);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  min-height: 40px;
+  text-transform: none;
+}
+.fc .fc-button:hover { border-color: var(--color-body); background: #fff; color: var(--color-ink); }
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:disabled { background: var(--color-canvas); color: var(--color-body); border-color: var(--color-line); }

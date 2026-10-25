@@ -32,6 +32,25 @@ export function subtractBusinessDays(date: string, n: number, holidays: Set<stri
   return businessDayOnOrBefore(d, holidays)
 }
 
+/** settings의 remind_days 값('7,3,1') → [7, 3, 1] */
+export function parseRemindDays(settings: Pick<Setting, 'key' | 'value'>[]): number[] {
+  const value = settings.find((s) => s.key === 'remind_days')?.value ?? '7,3,1'
+  return value.split(',').map((d) => Number(d.trim())).filter((n) => Number.isInteger(n) && n > 0)
+}
+
+/**
+ * 리마인드일: 사내 마감 D-7, D-3, D-1 (달력 기준). 주말·공휴일이면 직전 영업일로 당긴다.
+ * 당긴 결과가 같은 날이면 하나로 합친다.
+ */
+export function reminderDates(deadline: string, days: number[], holidays: Set<string>): { date: string; label: string }[] {
+  const byDate = new Map<string, string[]>()
+  for (const n of [...days].sort((a, b) => b - a)) {
+    const date = businessDayOnOrBefore(addDays(deadline, -n), holidays)
+    byDate.set(date, [...(byDate.get(date) ?? []), `D-${n}`])
+  }
+  return [...byDate].map(([date, labels]) => ({ date, label: labels.join('·') }))
+}
+
 /** 사내 마감일 = 정산 기한 − 사내 마감 여유일(영업일). 정산 기한이 없으면 null */
 export function internalDeadline(
   project: Pick<Project, 'settlement_deadline' | 'internal_buffer_days'>,
