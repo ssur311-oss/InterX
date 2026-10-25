@@ -23,6 +23,16 @@ export function weekdayOf(date: string): number {
   return new Date(`${date}T00:00:00Z`).getUTCDay()
 }
 
+/** 서울 기준 오늘 'YYYY-MM-DD' */
+export function todaySeoul(): string {
+  return seoulParts(new Date().toISOString()).date
+}
+
+/** 'YYYY-MM-DD'에 n일 더하기 (음수면 빼기) */
+export function addDays(date: string, n: number): string {
+  return new Date(new Date(`${date}T00:00:00Z`).getTime() + n * DAY_MS).toISOString().slice(0, 10)
+}
+
 function toIso(y: number, mo: number, d: number, h: number, mi: number): string | null {
   const t = new Date(Date.UTC(y, mo - 1, d, h, mi))
   // 2월 30일 같은 없는 날짜를 걸러낸다

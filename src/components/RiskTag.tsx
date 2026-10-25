@@ -9,17 +9,22 @@ export const RISK_LABEL: Record<RiskCode, string> = {
 }
 
 // 위험 표시는 위반 확정이 아니라 "확인 필요"라는 뜻 (RULE.md 2장)
-export function RiskTag({ code, detail, resolved = false }: { code: RiskCode; detail?: string | null; resolved?: boolean }) {
-  return (
-    <span
-      title={detail ?? undefined}
-      className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs ${
-        resolved ? 'bg-gray-100 text-gray-500 line-through' : 'bg-orange-50 text-orange-800'
-      }`}
-    >
-      ⚠️ {RISK_LABEL[code]} · {resolved ? '소명 완료' : '확인 필요'}
-    </span>
-  )
+type RiskTagProps = { code: RiskCode; detail?: string | null; resolved?: boolean; onClick?: () => void }
+
+export function RiskTag({ code, detail, resolved = false, onClick }: RiskTagProps) {
+  const className = `inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs ${
+    resolved ? 'bg-gray-100 text-gray-500' : 'bg-orange-50 text-orange-800'
+  }`
+  const label = `⚠️ ${RISK_LABEL[code]} · ${resolved ? '소명 완료' : '확인 필요'}`
+  if (onClick && !resolved) {
+    return (
+      <button type="button" title={`${detail ?? ''}\n눌러서 소명 처리`} onClick={onClick}
+        className={`${className} ring-orange-300 hover:ring-1`}>
+        {label}
+      </button>
+    )
+  }
+  return <span title={detail ?? undefined} className={className}>{label}</span>
 }
 
 export function NoRuleTag() {

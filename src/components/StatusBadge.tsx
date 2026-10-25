@@ -1,22 +1,20 @@
-export type DocStatus = 'submitted' | 'scheduled' | 'missing'
+import { formatDate } from '../lib/format'
+import { STATE_ICON, STATE_LABEL, type DocState } from '../lib/rules/docStatus'
 
-const ICON: Record<DocStatus, string> = {
-  submitted: '✅',
-  scheduled: '⏳',
-  missing: '❌',
-}
-
-const STYLE: Record<DocStatus, string> = {
+const STYLE: Record<DocState, string> = {
+  overdue: 'bg-red-100 text-red-800 font-semibold',
+  over_deadline: 'bg-amber-100 text-amber-900',
+  missing: 'bg-red-50 text-red-700',
+  scheduled: 'bg-sky-50 text-sky-800',
   submitted: 'bg-green-50 text-green-800',
-  scheduled: 'bg-amber-50 text-amber-800',
-  missing: 'bg-red-50 text-red-800',
 }
 
-// 0단계: 저장된 상태만 표시. 약속일 경과(🔴)·마감 넘는 예정(⚠️) 계산은 3단계에서 추가
-export function StatusBadge({ docType, status }: { docType: string; status: DocStatus }) {
+export function StatusBadge({ docType, state, plannedDate }: { docType: string; state: DocState; plannedDate?: string | null }) {
+  const date = plannedDate && state !== 'submitted' && state !== 'missing' ? ` ${formatDate(plannedDate)}` : ''
   return (
-    <span className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs ${STYLE[status]}`}>
-      {ICON[status]} {docType}
+    <span title={STATE_LABEL[state]} className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs ${STYLE[state]}`}>
+      {STATE_ICON[state]} {docType}
+      {date}
     </span>
   )
 }

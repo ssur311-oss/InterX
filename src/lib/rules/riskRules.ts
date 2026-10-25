@@ -1,6 +1,7 @@
 import { seoulParts } from '../date'
 import { formatDate, formatTime, formatWon } from '../format'
 import type { Project, Setting } from '../types'
+import { parseHolidays } from './deadline'
 import { normalize } from './docRules'
 
 // 감사 위험 건 판정 (RULE.md 2장). 결과는 "확인 필요"이지 위반 확정이 아니다.
@@ -30,7 +31,7 @@ export function riskConfigFromSettings(settings: Pick<Setting, 'key' | 'value'>[
     lateNightStart: toMinutes(get('late_night_start', '23:00')),
     lateNightEnd: toMinutes(get('late_night_end', '06:00')),
     splitThreshold: Number(get('split_threshold_amount', '2000000')),
-    holidays: new Set(get('holidays', '').split(',').map((d) => d.trim()).filter(Boolean)),
+    holidays: parseHolidays(settings),
   }
 }
 

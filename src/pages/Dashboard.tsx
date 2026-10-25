@@ -1,106 +1,100 @@
-import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
-import { formatDate, formatWon } from '../lib/format'
-import { StatusBadge, type DocStatus } from '../components/StatusBadge'
-import { NoRuleTag, RiskTag } from '../components/RiskTag'
-import type { RiskCode } from '../lib/rules/riskRules'
-
-type ExpenseRow = {
-  id: string
-  category: string
-  sub_category: string | null
-  pay_method: 'card' | 'transfer'
-  amount: number
-  paid_at: string
-  vendor: string | null
-  description: string | null
-  no_rule: boolean
-  projects: { short_name: string } | null
-  people: { name: string } | null
-  required_docs: { id: string; doc_type: string; status: DocStatus }[]
-  risk_flags: { id: string; rule_code: RiskCode; detail: string | null; resolved: boolean }[]
-}
+import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Filters } from '../components/dashboard/Filters'
+import { TodaySummary } from '../components/dashboard/TodaySummary'
+import { ExpenseRow } from '../components/ExpenseRow'
+import { ResolveRiskDialog } from '../components/ResolveRiskDialog'
+import { applyFilter, countViews, EMPTY_FILTER, type Filter } from '../lib/dashboardFilter'
+import { formatDate } from '../lib/format'
+import { useDashboard, type DashExpense, type DashRisk } from '../lib/useDashboard'
 
 export default function Dashboard() {
-  const [rows, setRows] = useState<ExpenseRow[]>([])
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { expenses, projects, people, today, error, loading, reload } = useDashboard()
+  const [filter, setFilter] = useState<Filter>(EMPTY_FILTER)
+  const [resolving, setResolving] = useState<{ expense: DashExpense; risk: DashRisk } | null>(null)
 
-  useEffect(() => {
-    if (!supabase) return
-    supabase
-      .from('expenses')
-      .select('id, category, sub_category, pay_method, amount, paid_at, vendor, description, no_rule, projects(short_name), people(name), required_docs(id, doc_type, status), risk_flags(id, rule_code, detail, resolved)')
-      .order('paid_at', { ascending: false })
-      .then(({ data, error }) => {
-        if (error) setError(error.message)
-        else setRows((data ?? []) as unknown as ExpenseRow[])
-        setLoading(false)
-      })
-  }, [])
+  // 카드 숫자는 과제·사람 필터를 반영하되, 카드 선택(view)과는 무관하게 센다
+  const scoped = useMemo(() => applyFilter(expenses, { ...filter, view: 'all' }, today), [expenses, filter, today])
+  const counts = useMemo(() => countViews(scoped, today), [scoped, today])
+  const visible = useMemo(() => applyFilter(expenses, filter, today), [expenses, filter, today])
+  const projectName = (id: string) => projects.find((p) => p.id === id)?.short_name ?? ''
 
   if (loading) return <p className="p-6 text-gray-500">불러오는 중…</p>
   if (error) return <p className="p-6 text-red-700">데이터를 불러오지 못했어요: {error}</p>
 
-  const docs = rows.flatMap((r) => r.required_docs)
-  const count = (s: DocStatus) => docs.filter((d) => d.status === s).length
-  const riskCount = rows.filter((r) => r.risk_flags.some((f) => !f.resolved)).length
-
   return (
     <main className="mx-auto max-w-6xl p-6">
-      <h1 className="text-2xl font-bold">증빙 현황판</h1>
-      <p className="mt-1 text-sm text-gray-600">
-        집행 {rows.length}건 · 증빙 {docs.length}개 — ✅ {count('submitted')} · ⏳ {count('scheduled')} · ❌ {count('missing')} · ⚠️ 위험 확인 필요 {riskCount}건
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h1 className="text-2xl font-bold">증빙 현황판</h1>
+          <p className="mt-1 text-sm text-gray-600">오늘 {formatDate(today)} 기준</p>
+        </div>
+        <p className="text-sm text-gray-600">
+          사내 마감{' '}
+          {projects.map((p, i) => (
+            <span key={p.id}>
+              {i > 0 && ' · '}
+              {p.short_name} <b>{p.deadline ? formatDate(p.deadline) : '정산 기한 미입력'}</b>
+            </span>
+          ))}
+        </p>
+      </div>
+
+      <h2 className="mt-6 mb-2 font-semibold">오늘 처리할 것</h2>
+      <TodaySummary counts={counts} active={filter.view} onSelect={(view) => setFilter({ ...filter, view })} />
+
+      <div className="mt-8 mb-2 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-semibold">집행 건 {visible.length}건</h2>
+        <Filters filter={filter} projects={projects} people={people} onChange={setFilter} />
+      </div>
+
+      {visible.length === 0 ? (
+        <div className="rounded border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-600">
+          {expenses.length === 0 ? (
+            <>아직 집행 건이 없어요. <Link to="/upload" className="text-blue-700 underline">엑셀 업로드</Link>로 시작하세요.</>
+          ) : (
+            '조건에 맞는 집행 건이 없어요. 🎉'
+          )}
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded border border-gray-200 bg-white">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-left text-gray-600">
+              <tr>
+                <th className="px-3 py-2">집행일</th>
+                <th className="px-3 py-2">과제 / 비목</th>
+                <th className="px-3 py-2">내용 · 위험</th>
+                <th className="px-3 py-2 text-right">금액</th>
+                <th className="px-3 py-2">사용자</th>
+                <th className="px-3 py-2">증빙</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((e) => (
+                <ExpenseRow key={e.id} expense={e} projectName={projectName(e.project_id)}
+                  onResolve={(risk) => setResolving({ expense: e, risk })} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <p className="mt-3 text-xs text-gray-500">
+        🔴 약속일 경과 · ⚠️ 마감 넘는 예정 · ❌ 미제출 · ⏳ 제출 예정 · ✅ 제출 — 위험 태그를 누르면 소명 처리할 수 있어요.
       </p>
 
-      <div className="mt-4 overflow-x-auto rounded border border-gray-200 bg-white">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-left text-gray-600">
-            <tr>
-              <th className="px-3 py-2">집행일</th>
-              <th className="px-3 py-2">과제</th>
-              <th className="px-3 py-2">비목</th>
-              <th className="px-3 py-2">내용</th>
-              <th className="px-3 py-2 text-right">금액</th>
-              <th className="px-3 py-2">사용자</th>
-              <th className="px-3 py-2">증빙</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.id} className="border-t border-gray-100 align-top">
-                <td className="whitespace-nowrap px-3 py-2">{formatDate(r.paid_at)}</td>
-                <td className="whitespace-nowrap px-3 py-2">{r.projects?.short_name}</td>
-                <td className="whitespace-nowrap px-3 py-2">
-                  {r.category}
-                  {r.sub_category && <span className="text-gray-500"> / {r.sub_category}</span>}
-                </td>
-                <td className="px-3 py-2">
-                  {r.description}
-                  <div className="text-xs text-gray-500">
-                    {r.vendor} · {r.pay_method === 'card' ? '카드' : '계좌이체'}
-                  </div>
-                  {(r.risk_flags.length > 0 || r.no_rule) && (
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {r.risk_flags.map((f) => <RiskTag key={f.id} code={f.rule_code} detail={f.detail} resolved={f.resolved} />)}
-                      {r.no_rule && <NoRuleTag />}
-                    </div>
-                  )}
-                </td>
-                <td className="whitespace-nowrap px-3 py-2 text-right">{formatWon(r.amount)}</td>
-                <td className="whitespace-nowrap px-3 py-2">{r.people?.name}</td>
-                <td className="px-3 py-2">
-                  <div className="flex flex-wrap gap-1">
-                    {r.required_docs.map((d) => (
-                      <StatusBadge key={d.id} docType={d.doc_type} status={d.status} />
-                    ))}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {resolving && (
+        <ResolveRiskDialog
+          expenseId={resolving.expense.id}
+          expenseLabel={`${formatDate(resolving.expense.paid_at)} ${resolving.expense.description ?? ''}`}
+          risk={resolving.risk}
+          onClose={() => setResolving(null)}
+          onDone={() => {
+            setResolving(null)
+            reload()
+          }}
+        />
+      )}
     </main>
   )
 }
