@@ -1,3 +1,4 @@
+import { ClipboardList, TriangleAlert } from 'lucide-react'
 import type { RiskCode } from '../lib/rules/riskRules'
 
 export const RISK_LABEL: Record<RiskCode, string> = {
@@ -12,14 +13,19 @@ export const RISK_LABEL: Record<RiskCode, string> = {
 type RiskTagProps = { code: RiskCode; detail?: string | null; resolved?: boolean; onClick?: () => void }
 
 export function RiskTag({ code, detail, resolved = false, onClick }: RiskTagProps) {
-  const className = `inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs ${
-    resolved ? 'bg-gray-100 text-gray-500' : 'bg-orange-50 text-orange-800'
+  const className = `inline-flex min-h-8 items-center gap-1 rounded-full px-3 text-[13px] font-medium ${
+    resolved ? 'bg-white/60 text-body' : 'bg-[#fff6db] text-ink'
   }`
-  const label = `⚠️ ${RISK_LABEL[code]} · ${resolved ? '소명 완료' : '확인 필요'}`
+  const label = (
+    <>
+      <TriangleAlert aria-hidden size={14} className={resolved ? '' : 'text-warn'} />
+      {RISK_LABEL[code]} · {resolved ? '소명 완료' : '확인 필요'}
+    </>
+  )
   if (onClick && !resolved) {
     return (
       <button type="button" title={`${detail ?? ''}\n눌러서 소명 처리`} onClick={onClick}
-        className={`${className} ring-orange-300 hover:ring-1`}>
+        className={`${className} ring-warn hover:ring-1`}>
         {label}
       </button>
     )
@@ -29,8 +35,9 @@ export function RiskTag({ code, detail, resolved = false, onClick }: RiskTagProp
 
 export function NoRuleTag() {
   return (
-    <span title="규칙표에 없는 비목·결제 조합이라 결제 증빙만 만들었어요" className="inline-flex rounded bg-purple-50 px-2 py-0.5 text-xs text-purple-800">
-      📋 규칙 없음 · 확인 필요
+    <span title="규칙표에 없는 비목·결제 조합이라 결제 증빙만 만들었어요" className="inline-flex min-h-8 items-center gap-1 rounded-full bg-white/70 px-3 text-[13px] font-medium text-body">
+      <ClipboardList aria-hidden size={14} />
+      규칙 없음 · 확인 필요
     </span>
   )
 }

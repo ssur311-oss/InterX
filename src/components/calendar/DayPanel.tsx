@@ -9,6 +9,7 @@ const TONE_BORDER: Record<CalItem['tone'], string> = {
   overdue: 'border-danger',
   over_deadline: 'border-warn',
   planned: 'border-body',
+  schedule: 'border-brand',
 }
 
 /** 선택한 날의 일정 목록 */
@@ -19,7 +20,7 @@ export function DayPanel({ date, items, isHoliday }: { date: string; items: CalI
       <h3 className="mb-1 text-xl font-bold">{formatDate(date)}</h3>
       <p className="mb-4 text-[13px] text-body">{isHoliday ? '공휴일 · ' : ''}일정 {items.length}개</p>
       {sorted.length === 0 ? (
-        <p className="rounded-lg bg-canvas p-4 text-[13px] text-body">이 날은 일정이 없어요. 달력에서 다른 날을 눌러 보세요.</p>
+        <p className="rounded-lg bg-white/50 p-4 text-[13px] text-body">이 날은 일정이 없어요. 달력에서 다른 날을 눌러 보세요.</p>
       ) : (
         <ul className="space-y-4">
           {sorted.map((item) => (

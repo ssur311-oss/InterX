@@ -41,3 +41,32 @@ export type Setting = {
   value: string
   label: string | null
 }
+
+export type BudgetItem = {
+  id: string
+  project_id: string
+  category: string
+  planned_amount: number
+  spent_amount: number
+}
+
+export type ScheduleKind = '마감' | '급여' | '감사' | '보고' | '기타'
+export type ScheduleRepeat = 'once' | 'monthly' | 'quarterly' | 'yearly'
+
+export type Schedule = {
+  id: string
+  title: string
+  kind: ScheduleKind
+  repeat: ScheduleRepeat
+  base_date: string
+  docs: string | null
+  remind_days: number
+  project_id: string | null
+}
+
+export const REPEAT_LABEL: Record<ScheduleRepeat, string> = {
+  once: '한 번',
+  monthly: '매월',
+  quarterly: '분기마다',
+  yearly: '매년',
+}

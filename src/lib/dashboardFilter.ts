@@ -1,10 +1,18 @@
 import type { DashExpense } from './useDashboard'
 
-export type View = 'all' | 'overdue' | 'today' | 'over_deadline' | 'missing' | 'risk'
+// 위험 확인 필요는 AI 기능을 붙일 때 다시 넣는다
+export type View = 'all' | 'overdue' | 'today' | 'over_deadline'
+export type SummaryView = Exclude<View, 'all'>
 
 export type Filter = { view: View; projectId: string; personId: string }
 
 export const EMPTY_FILTER: Filter = { view: 'all', projectId: '', personId: '' }
+
+export const VIEW_LABEL: Record<SummaryView, string> = {
+  overdue: '약속일 경과',
+  today: '오늘 제출 예정',
+  over_deadline: '변동 사항',
+}
 
 function matchesView(e: DashExpense, view: View, today: string): boolean {
   switch (view) {
@@ -12,8 +20,6 @@ function matchesView(e: DashExpense, view: View, today: string): boolean {
       return true
     case 'today':
       return e.required_docs.some((d) => d.status === 'scheduled' && d.planned_date === today)
-    case 'risk':
-      return e.openRisks > 0 || e.no_rule
     default:
       return e.required_docs.some((d) => d.state === view)
   }
@@ -28,14 +34,12 @@ export function applyFilter(expenses: DashExpense[], f: Filter, today: string): 
   )
 }
 
-/** "오늘 처리할 것" 카드 숫자. 증빙은 개수, 위험은 집행 건수 */
-export function countViews(expenses: DashExpense[], today: string): Record<Exclude<View, 'all'>, number> {
+/** 요약 카드 숫자 (서류 개수) */
+export function countViews(expenses: DashExpense[], today: string): Record<SummaryView, number> {
   const docs = expenses.flatMap((e) => e.required_docs)
   return {
     overdue: docs.filter((d) => d.state === 'overdue').length,
     today: docs.filter((d) => d.status === 'scheduled' && d.planned_date === today).length,
     over_deadline: docs.filter((d) => d.state === 'over_deadline').length,
-    missing: docs.filter((d) => d.state === 'missing').length,
-    risk: expenses.filter((e) => e.openRisks > 0 || e.no_rule).length,
   }
 }

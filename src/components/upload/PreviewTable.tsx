@@ -14,9 +14,9 @@ function RowStatus({ row }: { row: PreviewRow }) {
 
 export function PreviewTable({ rows }: { rows: PreviewRow[] }) {
   return (
-    <div className="overflow-x-auto rounded border border-gray-200 bg-white">
+    <div className="max-h-full overflow-auto rounded-xl border border-white/90 bg-white/60">
       <table className="w-full text-sm">
-        <thead className="bg-gray-50 text-left text-gray-600">
+        <thead className="sticky top-0 bg-white text-left text-body">
           <tr>
             <th className="px-3 py-2">줄</th>
             <th className="px-3 py-2">상태</th>
@@ -32,7 +32,7 @@ export function PreviewTable({ rows }: { rows: PreviewRow[] }) {
           {rows.map((r) => {
             const e = r.expense
             return (
-              <tr key={r.rowNumber} className={`border-t border-gray-100 align-top ${r.errors.length ? 'bg-red-50/40' : r.duplicate ? 'text-gray-400' : ''}`}>
+              <tr key={r.rowNumber} className={`border-t border-line align-top ${r.errors.length ? 'bg-red-50/40' : r.duplicate ? 'text-gray-400' : ''}`}>
                 <td className="px-3 py-2 text-gray-500">{r.rowNumber}</td>
                 <td className="whitespace-nowrap px-3 py-2"><RowStatus row={r} /></td>
                 <td className="whitespace-nowrap px-3 py-2">{e && `${formatDate(e.paid_at)} ${formatTime(e.paid_at)}`}</td>

@@ -22,15 +22,15 @@ export function UpcomingDeadlines({ projects, expenses, today }: { projects: Pro
           <div key={p.id} className="border-b border-line py-4 last:border-0">
             <div className="flex items-center justify-between">
               <b>{p.short_name}</b>
-              <span className={`rounded px-2 py-1 text-[13px] ${left <= 3 ? 'bg-red-50 text-red-800' : 'bg-canvas'}`}>
+              <span className={`rounded px-2 py-1 text-[13px] ${left <= 3 ? 'bg-[#fdecea] text-danger' : 'bg-white/70'}`}>
                 {left > 0 ? `D-${left}` : left === 0 ? 'D-day' : `D+${-left}`}
               </span>
             </div>
             <p className="text-[13px] text-body">
               {formatDate(p.deadline!)} · 정산 {formatDate(p.settlement_deadline!)}
             </p>
-            <div className="my-2 h-2 overflow-hidden rounded-full bg-canvas" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-              <span className="block h-full bg-body" style={{ width: `${pct}%` }} />
+            <div className="my-2 h-2 overflow-hidden rounded-full bg-[rgb(17_24_39/0.06)]" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+              <span className="block h-full rounded-full bg-ok" style={{ width: `${pct}%` }} />
             </div>
             <span className="text-[13px] text-body">필요 서류 {docs.length}개 중 {done}개 제출 ({pct}%)</span>
           </div>

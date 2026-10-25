@@ -91,7 +91,7 @@ function EditRow({ row, isNew, props }: { row: Row; isNew: boolean; props: Props
   }
 
   return (
-    <tr className={`border-t border-gray-100 align-middle ${isNew ? 'bg-blue-50/50' : ''}`}>
+    <tr className={`border-t border-line align-middle ${isNew ? 'bg-blue-50/50' : ''}`}>
       {fields.map((f) => (
         <td key={f.key} className={`px-2 py-1.5 ${f.className ?? ''}`}>
           <Cell field={f} value={draft[f.key]} onChange={(v) => { setDraft({ ...draft, [f.key]: v }); setMessage(null) }} />
@@ -101,7 +101,7 @@ function EditRow({ row, isNew, props }: { row: Row; isNew: boolean; props: Props
         <button
           onClick={save}
           disabled={!dirty || busy}
-          className="rounded bg-blue-600 px-3 py-1 text-sm text-white disabled:bg-gray-200 disabled:text-gray-500"
+          className="min-h-9 rounded-lg bg-brand px-3 text-sm font-medium text-white disabled:bg-line disabled:text-body"
         >
           {isNew ? '추가' : '저장'}
         </button>
@@ -117,9 +117,9 @@ function EditRow({ row, isNew, props }: { row: Row; isNew: boolean; props: Props
 export function EditableTable(props: Props) {
   const { fields, rows, idKey, canAdd, newRow } = props
   return (
-    <div className="overflow-x-auto rounded border border-gray-200 bg-white">
+    <div className="overflow-x-auto rounded-xl border border-white/90 bg-white/60">
       <table className="w-full text-sm">
-        <thead className="bg-gray-50 text-left text-gray-600">
+        <thead className="bg-white/70 text-left text-body">
           <tr>
             {fields.map((f) => (
               <th key={f.key} className="whitespace-nowrap px-2 py-2 font-medium">

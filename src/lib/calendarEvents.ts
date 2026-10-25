@@ -1,10 +1,11 @@
 import { formatDate } from './format'
 import { reminderDates } from './rules/deadline'
-import type { Person } from './types'
+import { occurrences, scheduleDocs } from './schedules'
+import { REPEAT_LABEL, type Person, type Schedule } from './types'
 import type { DashExpense, ProjectWithDeadline } from './useDashboard'
 
 // 캘린더 일정 (F5): 공통 마감(정산 기한·사내 마감·리마인드) + 개별 제출 예정일
-export type CalTone = 'settlement' | 'deadline' | 'remind' | 'overdue' | 'over_deadline' | 'planned'
+export type CalTone = 'settlement' | 'deadline' | 'remind' | 'overdue' | 'over_deadline' | 'planned' | 'schedule'
 
 export type CalItem = {
   id: string
@@ -22,6 +23,7 @@ export const TONE_ICON: Record<CalTone, string> = {
   overdue: '🔴',
   over_deadline: '⚠️',
   planned: '⏳',
+  schedule: '🔁',
 }
 
 export const TONE_LABEL: Record<CalTone, string> = {
@@ -29,12 +31,13 @@ export const TONE_LABEL: Record<CalTone, string> = {
   deadline: '사내 마감',
   remind: '리마인드',
   overdue: '약속일 경과',
-  over_deadline: '마감 넘는 예정',
+  over_deadline: '변동 사항',
   planned: '제출 예정',
+  schedule: '반복 일정',
 }
 
 /** 같은 날 화면에 보이는 순서 */
-export const TONE_ORDER: CalTone[] = ['deadline', 'settlement', 'remind', 'overdue', 'over_deadline', 'planned']
+export const TONE_ORDER: CalTone[] = ['deadline', 'settlement', 'schedule', 'remind', 'overdue', 'over_deadline', 'planned']
 
 function commonItems(p: ProjectWithDeadline, remindDays: number[], holidays: Set<string>): CalItem[] {
   const items: CalItem[] = []
@@ -84,12 +87,32 @@ function plannedItems(expenses: DashExpense[], people: Person[]): CalItem[] {
   })
 }
 
+/** 반복·고정 일정 (매월 마감, 급여 정산일, 감사 등). from~to 사이만 펼친다 */
+function scheduleItems(schedules: Schedule[], holidays: Set<string>, from: string, to: string): CalItem[] {
+  return schedules.flatMap((s) =>
+    occurrences(s, from, to, holidays).map((date) => {
+      const docs = scheduleDocs(s)
+      return {
+        id: `schedule-${s.id}-${date}`, date, tone: 'schedule' as const, projectId: s.project_id ?? '',
+        title: `[${s.kind}] ${s.title}`,
+        lines: [`${REPEAT_LABEL[s.repeat]} · ${s.remind_days}일 전부터 알림`, ...(docs.length ? [`준비 서류: ${docs.join(', ')}`] : [])],
+      }
+    }),
+  )
+}
+
 export function buildCalendarItems(
   projects: ProjectWithDeadline[],
   expenses: DashExpense[],
   people: Person[],
   remindDays: number[],
   holidays: Set<string>,
+  schedules: Schedule[] = [],
+  range: { from: string; to: string } = { from: '2000-01-01', to: '2000-01-01' },
 ): CalItem[] {
-  return [...projects.flatMap((p) => commonItems(p, remindDays, holidays)), ...plannedItems(expenses, people)]
+  return [
+    ...projects.flatMap((p) => commonItems(p, remindDays, holidays)),
+    ...plannedItems(expenses, people),
+    ...scheduleItems(schedules, holidays, range.from, range.to),
+  ]
 }

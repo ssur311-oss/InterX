@@ -1,9 +1,10 @@
 import { useState } from 'react'
+import { Card, PageHeader, Workspace } from '../components/ui'
 import { EditableTable, type Field } from '../components/EditableTable'
 import { useRows } from '../lib/useRows'
-import { PAY_METHOD_LABEL, type DocRule, type Person, type Project, type Setting } from '../lib/types'
+import { PAY_METHOD_LABEL, REPEAT_LABEL, type DocRule, type Person, type Project, type Schedule, type Setting } from '../lib/types'
 
-const TABS = ['과제', '사람', '증빙 규칙표', '위험 기준값'] as const
+const TABS = ['과제', '사람', '증빙 규칙표', '반복 일정', '위험 기준값'] as const
 type Tab = (typeof TABS)[number]
 
 const PROJECT_FIELDS: Field[] = [
@@ -59,11 +60,36 @@ function DocRulesTab() {
   const { rows, reload } = useRows<DocRule>('doc_rules', 'category,sub_category,pay_method,sort_order')
   return (
     <>
-      <p className="mb-2 text-sm text-gray-600">
+      <p className="mb-4 text-body">
         집행 건의 <b>비목·세목 × 결제 방법</b>이 같은 줄을 찾아 필요 증빙을 만들어요. 세목이 없는 비목은 세목 칸을 비워 두세요.
       </p>
       <EditableTable table="doc_rules" idKey="id" fields={DOC_RULE_FIELDS} rows={rows} onChanged={reload}
         canAdd canDelete newRow={{ required: true, sort_order: 1 }} />
+    </>
+  )
+}
+
+const SCHEDULE_FIELDS: Field[] = [
+  { key: 'title', label: '일정 이름', type: 'text', required: true, className: 'min-w-44' },
+  { key: 'kind', label: '종류', type: 'select', required: true, className: 'min-w-24',
+    options: ['마감', '급여', '감사', '보고', '기타'].map((v) => ({ value: v, label: v })) },
+  { key: 'repeat', label: '반복', type: 'select', required: true, className: 'min-w-28',
+    options: Object.entries(REPEAT_LABEL).map(([value, label]) => ({ value, label })) },
+  { key: 'base_date', label: '기준 날짜', type: 'date', required: true },
+  { key: 'docs', label: '준비 서류(쉼표로 구분)', type: 'text', className: 'min-w-64' },
+  { key: 'remind_days', label: '며칠 전 알림', type: 'number', required: true, className: 'w-20' },
+]
+
+function SchedulesTab() {
+  const { rows, reload } = useRows<Schedule>('schedules', 'base_date')
+  return (
+    <>
+      <p className="mb-4 text-body">
+        매월·분기·매년 돌아오는 기한을 넣으면 캘린더에 표시되고, <b>며칠 전 알림</b>부터 위쪽 종에 알림이 떠요.
+        반복이면 기준 날짜의 '일'(매년이면 달과 일)마다 되풀이되고, 주말·공휴일이면 직전 영업일로 당겨져요.
+      </p>
+      <EditableTable table="schedules" idKey="id" fields={SCHEDULE_FIELDS} rows={rows} onChanged={reload}
+        canAdd canDelete newRow={{ kind: '마감', repeat: 'monthly', remind_days: 7 }} />
     </>
   )
 }
@@ -76,23 +102,23 @@ function ThresholdsTab() {
 export default function Settings() {
   const [tab, setTab] = useState<Tab>('과제')
   return (
-    <main className="mx-auto max-w-6xl p-6">
-      <h1 className="text-2xl font-bold">설정</h1>
-      <p className="mt-1 text-sm text-gray-600">값은 예시 기본값이에요. 과제 협약·전문기관 지침에 맞춰 고쳐 주세요.</p>
-      <div className="mt-4 flex gap-1 border-b border-gray-200">
+    <Workspace>
+      <PageHeader title="설정" desc="값은 예시 기본값이에요. 과제 협약·전문기관 지침에 맞춰 고쳐 주세요." />
+      <div className="glass mb-6 inline-flex flex-wrap gap-1 rounded-2xl p-1">
         {TABS.map((t) => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`-mb-px border-b-2 px-4 py-2 text-sm ${tab === t ? 'border-blue-600 font-semibold text-blue-700' : 'border-transparent text-gray-600 hover:text-gray-900'}`}>
+          <button key={t} onClick={() => setTab(t)} aria-pressed={tab === t}
+            className={`min-h-12 rounded-xl px-5 ${tab === t ? 'bg-white font-semibold text-ink shadow-sm' : 'text-body hover:bg-white/50'}`}>
             {t}
           </button>
         ))}
       </div>
-      <div className="mt-4">
+      <Card>
         {tab === '과제' && <ProjectsTab />}
         {tab === '사람' && <PeopleTab />}
         {tab === '증빙 규칙표' && <DocRulesTab />}
+        {tab === '반복 일정' && <SchedulesTab />}
         {tab === '위험 기준값' && <ThresholdsTab />}
-      </div>
-    </main>
+      </Card>
+    </Workspace>
   )
 }

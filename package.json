@@ -7,14 +7,17 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "app": "start \"\" msedge --app=http://localhost:5173 --start-maximized"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.22",
     "@fullcalendar/daygrid": "^6.1.22",
     "@fullcalendar/interaction": "^6.1.22",
+    "@fullcalendar/multimonth": "^6.1.22",
     "@fullcalendar/react": "^6.1.22",
     "@supabase/supabase-js": "^2.118.0",
+    "lucide-react": "^1.61.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-router-dom": "^7.18.4",

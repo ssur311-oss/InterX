@@ -15,7 +15,7 @@ export const STATE_ICON: Record<DocState, string> = {
 
 export const STATE_LABEL: Record<DocState, string> = {
   overdue: '약속일 경과',
-  over_deadline: '마감 넘는 예정',
+  over_deadline: '변동 사항', // 사내 마감을 넘는 예정일. 화면 이름만 '변동 사항'으로 부른다
   missing: '미제출',
   scheduled: '제출 예정',
   submitted: '제출',

@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
+import { BTN_PRIMARY } from '../components/ui'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -17,23 +18,24 @@ export default function Login() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
-      <form onSubmit={submit} className="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-        <h1 className="text-xl font-bold">증빙 마감 도우미</h1>
-        <p className="mt-1 text-sm text-gray-600">관리자 계정으로 로그인하세요.</p>
-        <label className="mt-5 block text-sm font-medium">
+    <main className="flex min-h-full items-center justify-center p-5">
+      <form onSubmit={submit} className="glass-strong w-full max-w-sm rounded-3xl p-8">
+        <img src="/icon.svg" alt="" className="mb-4 h-12 w-12" />
+        <h1 className="text-2xl font-bold">증빙 마감 도우미</h1>
+        <p className="mt-1 text-body">관리자 계정으로 로그인하세요.</p>
+        <label className="mt-6 block font-medium">
           이메일
           <input type="email" required autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-3 py-2" />
+            className="mt-2 min-h-12 w-full rounded-lg border border-line bg-white/80 px-4 focus:border-brand" />
         </label>
-        <label className="mt-3 block text-sm font-medium">
+        <label className="mt-4 block font-medium">
           비밀번호
           <input type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-3 py-2" />
+            className="mt-2 min-h-12 w-full rounded-lg border border-line bg-white/80 px-4 focus:border-brand" />
         </label>
-        {error && <p className="mt-3 text-sm text-red-700">{error}</p>}
+        {error && <p className="mt-4 text-danger">{error}</p>}
         <button type="submit" disabled={busy}
-          className="mt-5 w-full rounded bg-blue-600 py-2 font-medium text-white disabled:bg-gray-300">
+          className={`${BTN_PRIMARY} mt-6 w-full`}>
           {busy ? '확인 중…' : '로그인'}
         </button>
       </form>
