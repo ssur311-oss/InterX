@@ -80,12 +80,21 @@ export function AiAssistantCharacter({ state = 'idle', paused = false, pointerTr
       moni.decor.visible = wide
       const aspect = width / height
       const halfH = wide ? 2.3 : 2.2
-      const needW = wide ? 3.15 : 2.2
+      const needW = wide ? 3.5 : 2.2
       const h = Math.max(halfH, needW / aspect)
-      moni.camera.left = -h * aspect + (wide ? 0.3 : -0.1)
-      moni.camera.right = h * aspect + (wide ? 0.3 : -0.1)
+      moni.camera.left = -h * aspect
+      moni.camera.right = h * aspect
       moni.camera.top = h
       moni.camera.bottom = -h
+      moni.camera.updateProjectionMatrix()
+      // 화분·마우스가 아니라 모니(모니터) 자체가 화면 가운데 오도록 카메라 범위를 옮긴다
+      const center = new THREE.Vector3(-0.4, 1.1, -0.08).project(moni.camera)
+      const shiftX = center.x * h * aspect
+      const shiftY = center.y * h
+      moni.camera.left += shiftX
+      moni.camera.right += shiftX
+      moni.camera.top += shiftY
+      moni.camera.bottom += shiftY
       moni.camera.updateProjectionMatrix()
       dirty = true
     }

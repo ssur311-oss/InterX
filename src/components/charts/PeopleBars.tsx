@@ -29,7 +29,7 @@ export function PeopleBars({ expenses, onSelect }: { expenses: DashExpense[]; on
             className="grid min-h-11 w-full grid-cols-[72px_1fr_auto] items-center gap-3 rounded-lg px-1 text-left text-[15px] hover:bg-white/70">
             <span className="truncate font-medium text-brand underline-offset-4 hover:underline">{v.name}</span>
             <div className="h-2.5 rounded-full bg-[rgb(17_24_39/0.06)]">
-              <span className="block h-full rounded-full bg-brand" style={{ width: `${(v.left / max) * 100}%` }} />
+              <span className="block h-full rounded-full bg-linear-to-r from-chart-2 to-chart-1" style={{ width: `${(v.left / max) * 100}%` }} />
             </div>
             <span className="tabular-nums">
               <b>{v.left}</b>

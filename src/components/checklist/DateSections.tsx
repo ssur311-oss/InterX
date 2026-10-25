@@ -19,10 +19,14 @@ type Props = {
   projectName: (id: string) => string
   leaving: Set<string>
   onToggle: (e: DashExpense, d: DashDoc, checked: boolean) => void
+  onFile?: (e: DashExpense, d: DashDoc, file: File) => Promise<void>
+  onOpen?: (d: DashDoc) => void
+  onAddDoc?: (e: DashExpense, name: string) => Promise<void>
+  docSuggestions?: string[]
 }
 
 /** 날짜 구간: "Today 10.25 ······ 오늘 들어온 3건". 아래로 내리면 더 예전 날짜 구간이 이어서 나온다 */
-export function DateSections({ sections, today, projectName, leaving, onToggle }: Props) {
+export function DateSections({ sections, today, projectName, leaving, onToggle, onFile, onOpen, onAddDoc, docSuggestions }: Props) {
   const [shown, setShown] = useState(STEP)
   const sentinel = useRef<HTMLDivElement>(null)
   const more = shown < sections.length
@@ -55,7 +59,8 @@ export function DateSections({ sections, today, projectName, leaving, onToggle }
             <div className="space-y-4">
               {s.expenses.map((e) => (
                 <ExpenseCard key={e.id} expense={e} projectName={projectName(e.project_id)} leaving={leaving.has(e.id)}
-                  onToggle={(d, c) => onToggle(e, d, c)} />
+                  onToggle={(d, c) => onToggle(e, d, c)} onFile={onFile && ((d, f) => onFile(e, d, f))} onOpen={onOpen}
+                  onAddDoc={onAddDoc && ((name) => onAddDoc(e, name))} docSuggestions={docSuggestions} />
               ))}
             </div>
           </section>

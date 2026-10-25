@@ -11,7 +11,7 @@ export function BudgetBars({ rows }: { rows: BudgetRow[] }) {
   return (
     <>
       <ul className="space-y-4">
-        {rows.map((r) => (
+        {rows.map((r, i) => (
           <li key={r.key} title={`${r.label}: ${formatWon(r.spent)} / ${formatWon(r.planned)}`}>
             <div className="mb-1 flex justify-between gap-2 text-[15px]">
               <span>{r.label}</span>
@@ -21,8 +21,9 @@ export function BudgetBars({ rows }: { rows: BudgetRow[] }) {
               </span>
             </div>
             <div className="h-2.5 overflow-hidden rounded-full bg-[rgb(17_24_39/0.06)]">
-              <span className={`block h-full rounded-full ${r.rate > 100 ? 'bg-danger' : 'bg-brand'}`}
-                style={{ width: `${Math.min(r.rate, 100)}%` }} />
+              {/* 항목마다 그래프 색을 돌려 쓴다 (예산 초과는 항상 빨강) */}
+              <span className="block h-full rounded-full"
+                style={{ width: `${Math.min(r.rate, 100)}%`, background: r.rate > 100 ? 'var(--color-danger)' : `var(--color-chart-${(i % 4) + 1})` }} />
             </div>
           </li>
         ))}

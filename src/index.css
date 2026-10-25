@@ -1,9 +1,21 @@
 @import "tailwindcss";
 
-/* 디자인 토큰 — 사용자 디자인 규칙(주 색 #2D5BFF, 보조 #FFB800) + 밝은 글래스 */
+/* 디자인 토큰 — 기본(파랑) 테마. 사용자 디자인 규칙(주 색 #2D5BFF, 보조 #FFB800) + 밝은 글래스
+   인터엑스(오렌지) 테마는 아래 :root[data-theme="interx"]에서 값만 덮어쓴다. 되돌리려면 index.html의 data-theme만 지우면 된다 */
 @theme {
   --color-brand: #2d5bff;
+  --color-brand-strong: #1f4be6; /* 주요 버튼 마우스 올림 */
   --color-brand-soft: #e8eeff;
+  --color-brand-ink: #2d5bff; /* 흰 바탕 위 작은 글자·링크 (대비 4.5:1 이상) */
+  --color-accent: #8b5cf6; /* 모니 화면의 포인트 */
+  --color-accent-soft: #ede9fe;
+  --color-accent-ink: #6d28d9;
+  --color-accent-line: #ddd6fe;
+  /* 그래프 막대 색 4가지. 기본 테마는 예전처럼 모두 주 색, 인터엑스 테마는 어울리는 오렌지 계열 여러 톤 */
+  --color-chart-1: #2d5bff;
+  --color-chart-2: #2d5bff;
+  --color-chart-3: #2d5bff;
+  --color-chart-4: #2d5bff;
   --color-canvas: #f5f7fa;
   --color-ink: #111111;
   --color-body: #444444;
@@ -25,14 +37,53 @@ body {
   height: 100%;
 }
 
-/* 밝은 배경 위에 주 색·보조 색을 아주 옅게 번지게 해서 유리 카드가 비쳐 보이게 한다 */
+/* 테마별 배경·카드·선택된 메뉴 (기본 = 파랑) */
+:root {
+  --bg-glow-1: rgb(45 91 255 / 0.14);
+  --bg-glow-2: rgb(45 91 255 / 0.09);
+  --bg-glow-3: rgb(255 184 0 / 0.1);
+  --bg-base: #eef2f8;
+  --glass-border: rgb(255 255 255 / 0.85);
+  --menu-active-bg: #ffffff;
+  --menu-active-fg: var(--color-ink);
+}
+
+/* 인터엑스 테마: 흰 바탕 + 왼쪽 위 살구빛 번짐, 주요 버튼·선택 메뉴·링크·그래프는 오렌지 계열 (interxlab.com 화면에서 뽑은 #E38633 기준) */
+:root[data-theme="interx"] {
+  --color-brand: #e38633;
+  --color-brand-strong: #c96f22;
+  --color-brand-soft: #fcebd9;
+  --color-brand-ink: #b25a10;
+  --color-accent: #c8612a;
+  --color-accent-soft: #fce6d4;
+  --color-accent-ink: #9a4a14;
+  --color-accent-line: #f3cfa8;
+  --color-chart-1: #e38633;
+  --color-chart-2: #f2a65a;
+  --color-chart-3: #b8561e;
+  --color-chart-4: #f6cfa3;
+  --color-warn: #eab308; /* 경고는 브랜드 오렌지와 헷갈리지 않게 노란 쪽으로 */
+  --color-ok: #3e4b54; /* 제출·완료: 초록 대신 인터엑스 로고의 INTER 색(짙은 회청) */
+  /* 거의 흰색에 아주 은은한 살구빛 */
+  --bg-glow-1: rgb(249 235 216 / 0.38);
+  --bg-glow-2: rgb(252 235 217 / 0.15);
+  --bg-glow-3: rgb(255 255 255 / 0);
+  --bg-base: #ffffff;
+  --glass-border: #efe9e2;
+  --menu-active-bg: var(--color-brand-soft);
+  --menu-active-fg: var(--color-brand-ink);
+}
+/* 흰 바탕 위 작은 오렌지 글자는 대비가 낮아서, 글자에는 진한 오렌지를 쓴다 */
+:root[data-theme="interx"] .text-brand { color: var(--color-brand-ink); }
+
+/* 밝은 배경 위에 주 색을 아주 옅게 번지게 해서 유리 카드가 비쳐 보이게 한다 */
 body {
   color: var(--color-ink);
   background:
-    radial-gradient(55% 45% at 8% 0%, rgb(45 91 255 / 0.14), transparent 70%),
-    radial-gradient(45% 45% at 100% 15%, rgb(45 91 255 / 0.09), transparent 70%),
-    radial-gradient(40% 40% at 75% 100%, rgb(255 184 0 / 0.1), transparent 70%),
-    #eef2f8;
+    radial-gradient(60% 50% at 8% 0%, var(--bg-glow-1), transparent 70%),
+    radial-gradient(45% 45% at 100% 15%, var(--bg-glow-2), transparent 70%),
+    radial-gradient(40% 40% at 75% 100%, var(--bg-glow-3), transparent 70%),
+    var(--bg-base);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
 }
@@ -42,7 +93,7 @@ body {
   background: rgb(255 255 255 / 0.62);
   backdrop-filter: blur(20px) saturate(160%);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
-  border: 1px solid rgb(255 255 255 / 0.85);
+  border: 1px solid var(--glass-border);
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.9),
     0 8px 24px rgb(17 24 39 / 0.06);
@@ -79,7 +130,7 @@ body {
 /* FullCalendar를 유리 카드 안에 어울리게 */
 .fc {
   --fc-border-color: rgb(17 24 39 / 0.08);
-  --fc-today-bg-color: rgb(45 91 255 / 0.05);
+  --fc-today-bg-color: color-mix(in srgb, var(--color-brand) 6%, transparent);
   --fc-neutral-bg-color: transparent;
   --fc-page-bg-color: transparent;
   --fc-event-bg-color: transparent;
@@ -87,6 +138,14 @@ body {
   --fc-event-text-color: var(--color-ink);
   font-size: 13px;
 }
+.fc-unzoom {
+  zoom: calc(1 / var(--ui-zoom, 1));
+}
+.fc-unzoom .fc {
+  font-size: calc(13px * var(--ui-zoom, 1));
+}
+.fc-unzoom .fc .fc-toolbar-title { font-size: calc(20px * var(--ui-zoom, 1)); }
+.fc-unzoom .fc .fc-button { min-height: calc(40px * var(--ui-zoom, 1)); font-size: calc(14px * var(--ui-zoom, 1)); }
 .fc .fc-scrollgrid { border-radius: 12px; overflow: hidden; }
 .fc .fc-col-header-cell {
   font-weight: 600;
@@ -175,3 +234,7 @@ body {
     user-select: none;
   }
 }
+/* 분기·연도 보기: 남는 세로 공간을 써서 칸을 키우고, 숫자와 +n이 겹치지 않게 */
+.fc .fc-multimonth-daygrid .fc-daygrid-day-frame { min-height: calc(54px * var(--ui-zoom, 1)); }
+.fc .fc-multimonth-daygrid .fc-daygrid-day-number { padding: 2px 4px; }
+.fc .fc-multimonth-daygrid .fc-daygrid-more-link { padding: 0 4px; }

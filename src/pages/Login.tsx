@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { BTN_PRIMARY } from '../components/ui'
+import { LOGO_SRC } from '../lib/theme'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -20,8 +21,8 @@ export default function Login() {
   return (
     <main className="flex min-h-full items-center justify-center p-5">
       <form onSubmit={submit} className="glass-strong w-full max-w-sm rounded-3xl p-8">
-        <img src="/icon.svg" alt="" className="mb-4 h-12 w-12" />
-        <h1 className="text-2xl font-bold">증빙 마감 도우미</h1>
+        <img src={LOGO_SRC} alt="" className="mb-4 h-12 w-12" />
+        <h1 className="text-2xl font-bold">in check</h1>
         <p className="mt-1 text-body">관리자 계정으로 로그인하세요.</p>
         <label className="mt-6 block font-medium">
           이메일

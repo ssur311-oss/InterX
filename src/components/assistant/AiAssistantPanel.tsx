@@ -12,7 +12,7 @@ function usePrefersReducedMotion() {
 }
 
 /**
- * AI 도우미 무대: 모니를 누르면 기능 버튼이 펼쳐지고, 말풍선이 설명해 준다.
+ * 체크메이트 모니 무대: 모니를 누르면 기능 버튼이 펼쳐지고, 말풍선이 설명해 준다.
  * 기능을 고르면 모니는 오른쪽 아래로 작아지고 작업 화면이 열린다.
  * 작업 결과(생각 중·완료·오류)에 맞춰 표정이 바뀐다. 저장·발송은 작업 화면의 관리자 버튼으로만.
  */
@@ -100,8 +100,8 @@ export function AiAssistantPanel() {
               <button key={key} onClick={() => pick(key)} aria-pressed={picked === key}
                 className="animate-pop flex w-24 flex-col items-center gap-1" style={{ animationDelay: `${i * 50}ms` }}>
                 <span className={`flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-lg transition-transform hover:scale-110 ${
-                  picked === key ? 'ring-3 ring-[#8b5cf6]' : ''}`}>
-                  <Icon aria-hidden size={24} strokeWidth={2.2} className={picked === key ? 'text-[#8b5cf6]' : 'text-[#3d4357]'} />
+                  picked === key ? 'ring-3 ring-accent' : ''}`}>
+                  <Icon aria-hidden size={24} strokeWidth={2.2} className={picked === key ? 'text-accent' : 'text-[#3d4357]'} />
                 </span>
                 <span className="rounded-full bg-white/80 px-2 text-[13px] font-medium whitespace-nowrap text-ink">{label}</span>
               </button>

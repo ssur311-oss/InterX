@@ -1,19 +1,25 @@
 import { useEffect, useState, type ChangeEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { ImagePlus, Loader2, RotateCcw, Sparkles, X } from 'lucide-react'
-import { missingFields, readReceipts, registerReceipts, toDraft, type ReceiptDraft } from '../../lib/aiReceipt'
+import { FileText, ImagePlus, Loader2, RotateCcw, Sparkles, X } from 'lucide-react'
+import { docTypesOf, isPdf, MAX_PDF_MB, missingFields, readReceipts, registerReceipts, toDraft, type ReceiptDraft } from '../../lib/aiReceipt'
+import { useDashboard } from '../../lib/useDashboard'
 import { loadUploadContext, type UploadContext } from '../../lib/upload/register'
 import { BTN, BTN_PRIMARY } from '../ui'
 import type { MoniState } from './AiAssistantCharacter'
 import { ReceiptCard } from './ReceiptCard'
 
-type Shot = { file: File; name: string; url: string }
+type Shot = { file: File; name: string; url: string; pdf: boolean }
 const MAX = 8
 
-/** 영수증 사진 → AI 읽기 → 관리자 확인·수정 → [등록] (엑셀 등록과 같은 규칙으로 필요 서류 생성) */
-// 모니 표정은 보여주기만 한다. 저장은 이 화면의 [등록] 버튼으로만
+/**
+ * 증빙 서류 올리기: 사진·PDF → AI가 무슨 서류인지 읽기 → 관리자가 확인 →
+ * 기존 집행 건의 서류 칸에 체크하거나, 새 집행 건으로 등록 (엑셀 등록과 같은 규칙)
+ */
+// 모니 표정은 보여주기만 한다. 저장은 이 화면의 [처리] 버튼으로만
 export function ReceiptPanel({ onMood }: { onMood?: (s: MoniState, ms?: number) => void }) {
   const [ctx, setCtx] = useState<UploadContext | null>(null)
+  // 기존 건에 붙일 때 후보로 쓸 집행 건(아직 안 낸 서류 포함)
+  const { expenses, reload } = useDashboard()
   const [shots, setShots] = useState<Shot[]>([])
   const [drafts, setDrafts] = useState<ReceiptDraft[] | null>(null)
   const [markPaid, setMarkPaid] = useState(true)
@@ -25,10 +31,13 @@ export function ReceiptPanel({ onMood }: { onMood?: (s: MoniState, ms?: number) 
   }, [])
 
   function onPick(e: ChangeEvent<HTMLInputElement>) {
-    const files = [...(e.target.files ?? [])].filter((f) => f.type.startsWith('image/'))
+    const all = [...(e.target.files ?? [])].filter((f) => f.type.startsWith('image/') || isPdf(f))
     e.target.value = ''
-    setMsg(null)
-    setShots((cur) => [...cur, ...files.map((file) => ({ file, name: file.name, url: URL.createObjectURL(file) }))].slice(0, MAX))
+    // PDF는 줄이지 않고 그대로 보내므로 너무 큰 파일은 뺀다
+    const tooBig = all.filter((f) => isPdf(f) && f.size > MAX_PDF_MB * 1024 * 1024)
+    const files = all.filter((f) => !tooBig.includes(f))
+    setMsg(tooBig.length ? { ok: false, text: `${tooBig.map((f) => f.name).join(', ')}: PDF는 ${MAX_PDF_MB}MB 이하만 올릴 수 있어요.` } : null)
+    setShots((cur) => [...cur, ...files.map((file) => ({ file, name: file.name, url: URL.createObjectURL(file), pdf: isPdf(file) }))].slice(0, MAX))
   }
 
   function reset() {
@@ -60,19 +69,23 @@ export function ReceiptPanel({ onMood }: { onMood?: (s: MoniState, ms?: number) 
     if (!ctx || !chosen.length || blocked) return
     setBusy('save')
     try {
-      const { count, risks } = await registerReceipts(chosen, ctx, markPaid)
-      setMsg({ ok: true, text: `집행 ${count}건을 등록했어요.${risks ? ` 위험 확인 필요 ${risks}개가 붙었어요.` : ''}` })
+      const { added, attached, risks } = await registerReceipts(chosen, ctx, markPaid, expenses)
+      const parts = [attached && `서류 ${attached}개를 제출로 체크했어요.`, added && `새 집행 ${added}건을 등록했어요.`, '파일은 보관함에 표준 이름으로 저장했어요.', risks && `위험 확인 필요 ${risks}개가 붙었어요.`]
+      setMsg({ ok: true, text: parts.filter(Boolean).join(' ') })
+      reload()
       onMood?.('success', 2600)
       reset()
       setCtx(await loadUploadContext())
     } catch (e) {
-      setMsg({ ok: false, text: `등록 중 문제가 생겼어요: ${(e as Error).message}` })
+      setMsg({ ok: false, text: `처리 중 문제가 생겼어요: ${(e as Error).message}` })
       onMood?.('error', 3000)
     }
     setBusy(null)
   }
 
   const categories = [...new Set(ctx?.rules.map((r) => r.category) ?? [])]
+  const docTypes = ctx ? docTypesOf(ctx) : []
+  const hasNew = chosen.some((d) => d.mode === 'new')
 
   return (
     <>
@@ -87,15 +100,20 @@ export function ReceiptPanel({ onMood }: { onMood?: (s: MoniState, ms?: number) 
         <>
           <label className="flex min-h-40 cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-brand/40 bg-white/60 p-6 text-center hover:bg-white">
             <ImagePlus aria-hidden size={36} className="text-brand" />
-            <b className="text-lg">영수증·세금계산서 사진 올리기</b>
-            <span className="text-body">사진 한 장 = 집행 한 건으로 읽어요. 한 번에 {MAX}장까지 (JPG·PNG)</span>
-            <input type="file" accept="image/*" multiple className="sr-only" onChange={onPick} />
+            <b className="text-lg">증빙 서류 올리기 (사진·PDF)</b>
+            <span className="text-body">영수증·세금계산서는 물론 회의록·검수조서·거래명세서·참석자 명단·출장결과보고서 등 무엇이든요.</span>
+            <span className="text-[13px] text-body">파일 하나 = 서류 하나 · 한 번에 {MAX}개까지 · PDF는 {MAX_PDF_MB}MB 이하</span>
+            <input type="file" accept="image/*,application/pdf,.pdf" multiple className="sr-only" onChange={onPick} />
           </label>
           {shots.length > 0 && (
             <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
               {shots.map((s, i) => (
                 <li key={s.url} className="relative overflow-hidden rounded-xl bg-white shadow-sm">
-                  <img src={s.url} alt={s.name} className="h-28 w-full object-cover" />
+                  {s.pdf ? (
+                    <span className="flex h-28 w-full items-center justify-center bg-brand-soft"><FileText aria-hidden size={32} className="text-brand" /></span>
+                  ) : (
+                    <img src={s.url} alt={s.name} className="h-28 w-full object-cover" />
+                  )}
                   <p className="truncate px-2 py-1 text-[13px] text-body">{s.name}</p>
                   <button onClick={() => { URL.revokeObjectURL(s.url); setShots((cur) => cur.filter((_, n) => n !== i)) }} aria-label={`${s.name} 빼기`}
                     className="absolute top-1 right-1 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-body hover:text-ink">
@@ -109,7 +127,7 @@ export function ReceiptPanel({ onMood }: { onMood?: (s: MoniState, ms?: number) 
             <span className="text-[13px] text-body">AI가 읽은 내용은 다음 화면에서 확인·수정한 뒤에만 저장돼요.</span>
             <button onClick={read} disabled={!shots.length || !ctx || busy !== null} className={BTN_PRIMARY}>
               {busy === 'read' ? <Loader2 aria-hidden size={18} className="animate-spin" /> : <Sparkles aria-hidden size={18} />}
-              {busy === 'read' ? '모니가 읽는 중…' : `AI로 읽기${shots.length ? ` (${shots.length}장)` : ''}`}
+              {busy === 'read' ? '모니가 읽는 중…' : `AI로 읽기${shots.length ? ` (${shots.length}개)` : ''}`}
             </button>
           </div>
         </>
@@ -117,22 +135,24 @@ export function ReceiptPanel({ onMood }: { onMood?: (s: MoniState, ms?: number) 
 
       {drafts && ctx && (
         <>
-          <p className="mb-3 text-body">AI가 읽은 내용이에요. 틀린 곳을 고치고, 노란 표시는 꼭 확인해 주세요.</p>
+          <p className="mb-3 text-body">AI가 읽은 내용이에요. 서류마다 <b className="text-ink">기존 집행 건에 체크</b>할지 <b className="text-ink">새 집행 건으로 등록</b>할지 고르고, 노란 표시는 꼭 확인해 주세요.</p>
           <div className="space-y-3">
             {drafts.map((d, i) => (
-              <ReceiptCard key={d.key} d={d} projects={ctx.projects} people={ctx.people} categories={categories}
+              <ReceiptCard key={d.key} d={d} projects={ctx.projects} people={ctx.people} categories={categories} docTypes={docTypes} expenses={expenses}
                 onChange={(patch) => setDrafts((cur) => cur!.map((x, n) => (n === i ? { ...x, ...patch } : x)))} />
             ))}
           </div>
           <div className="sticky bottom-0 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white/90 p-3 backdrop-blur">
-            <label className="flex min-h-11 cursor-pointer items-center gap-2">
-              <input type="checkbox" checked={markPaid} onChange={(e) => setMarkPaid(e.target.checked)} className="h-5 w-5 accent-brand" />
-              이 사진을 <b>결제 증빙(카드전표·세금계산서)</b>으로 제출 처리
-            </label>
+            {hasNew ? (
+              <label className="flex min-h-11 cursor-pointer items-center gap-2">
+                <input type="checkbox" checked={markPaid} onChange={(e) => setMarkPaid(e.target.checked)} className="h-5 w-5 accent-brand" />
+                새로 등록하는 건은 이 파일을 <b>결제 증빙(카드전표·세금계산서)</b>으로 제출 처리
+              </label>
+            ) : <span />}
             <div className="flex gap-2">
               <button onClick={reset} className={BTN}><RotateCcw aria-hidden size={18} /> 처음부터</button>
               <button onClick={save} disabled={!chosen.length || blocked || busy !== null} className={BTN_PRIMARY}>
-                {busy === 'save' ? '등록 중…' : `${chosen.length}건 등록하기`}
+                {busy === 'save' ? '처리 중…' : `${chosen.length}개 처리하기`}
               </button>
             </div>
           </div>

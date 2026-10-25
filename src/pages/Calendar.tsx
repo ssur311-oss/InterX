@@ -87,21 +87,26 @@ export default function Calendar() {
 
       <div className="grid gap-6 md:min-h-0 md:flex-1 lg:grid-cols-[minmax(0,1fr)_304px] lg:grid-rows-[minmax(0,1fr)]">
         <Card className="flex min-w-0 flex-col md:min-h-0">
-          <div className="h-[560px] md:h-auto md:min-h-0 md:flex-1">
+          {/* 화면 전체 축소(zoom) 안에서는 달력 부품이 칸 너비를 잘못 재므로, 이 영역만 축소를 풀고 글자 크기로 비율을 맞춘다 */}
+          <div className="fc-unzoom h-[560px] md:h-auto md:min-h-0 md:flex-1">
           <FullCalendar
             key={scope}
             plugins={[dayGridPlugin, interactionPlugin, multiMonthPlugin]}
             initialView={SCOPES.find((s) => s.key === scope)!.view}
             initialDate={scopeStart(today, scope)}
             views={{
-              multiMonthQuarter: { type: 'multiMonth', duration: { months: 3 }, multiMonthMaxColumns: 3 },
-              multiMonthYear: { multiMonthMaxColumns: 4 },
+              // 분기는 3달, 연도는 4달씩 나란히 (기본 최소 너비 350px이면 한 줄에 한 달만 들어가서 줄임)
+              multiMonthQuarter: { type: 'multiMonth', duration: { months: 3 }, multiMonthMaxColumns: 3, multiMonthMinWidth: 150 },
+              multiMonthYear: { multiMonthMaxColumns: 4, multiMonthMinWidth: 120 },
             }}
             locale={koLocale}
             headerToolbar={{ left: 'title', center: '', right: 'prev,today,next' }}
             height="100%"
             fixedWeekCount={false}
             dayMaxEvents
+            // 분기·연도 보기는 칸이 작아서 '일'·'개'를 빼고 숫자만 (자세한 내용은 날짜를 눌러 오른쪽에서)
+            dayCellContent={scope === 'month' ? undefined : (arg) => arg.dayNumberText.replace('일', '')}
+            moreLinkContent={scope === 'month' ? undefined : (arg) => `+${arg.num}`}
             events={events}
             eventOrder="order,title"
             dateClick={(info) => setSelected(info.dateStr)}

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { CalendarDays, CircleHelp, FileSpreadsheet, LayoutDashboard, ListChecks, LogOut, Settings, Sparkles } from 'lucide-react'
 import { formatDate } from '../lib/format'
+import { LOGO_SRC } from '../lib/theme'
 import { todaySeoul } from '../lib/date'
 import { supabase } from '../lib/supabase'
 import { NotificationBell } from './NotificationBell'
@@ -13,7 +14,7 @@ const WORK_MENU = [
   { to: '/checklist', Icon: ListChecks, label: '증빙 체크리스트' },
   { to: '/calendar', Icon: CalendarDays, label: '마감 캘린더' },
   { to: '/upload', Icon: FileSpreadsheet, label: '엑셀 등록' },
-  { to: '/assistant', Icon: Sparkles, label: 'AI 도우미' },
+  { to: '/assistant', Icon: Sparkles, label: '체크메이트 모니' },
 ]
 const ADMIN_MENU = [{ to: '/settings', Icon: Settings, label: '설정' }]
 const ALL_MENU = [...WORK_MENU, ...ADMIN_MENU]
@@ -25,7 +26,7 @@ function MenuLink({ to, Icon, label }: (typeof ALL_MENU)[number]) {
       end
       className={({ isActive }) =>
         `flex min-h-12 shrink-0 items-center gap-3 rounded-xl px-4 text-[15px] md:mb-1 ${
-          isActive ? 'bg-white font-semibold text-ink shadow-sm' : 'text-body hover:bg-white/60 hover:text-ink'
+          isActive ? 'bg-[var(--menu-active-bg)] font-semibold text-[var(--menu-active-fg)] shadow-sm' : 'text-body hover:bg-white/60 hover:text-ink'
         }`
       }
     >
@@ -49,17 +50,14 @@ export function Layout({ email }: { email: string }) {
     <div className="flex h-full flex-col">
       {/* 설치한 앱에서 창 맨 위 검은 제목줄 대신 쓰는 투명한 줄. 끌어서 창을 옮길 수 있다 (index.css .titlebar) */}
       <div className="titlebar" aria-hidden>
-        <img src="/icon.svg" alt="" className="h-4 w-4" />
-        <span>증빙 마감 도우미</span>
+        <img src={LOGO_SRC} alt="" className="h-4 w-4" />
+        <span>in check</span>
       </div>
     <div className="flex min-h-0 flex-1 flex-col md:flex-row">
       <aside className="glass z-10 md:m-4 md:mr-0 md:flex md:w-[240px] md:shrink-0 md:flex-col md:rounded-3xl md:p-4">
         <div className="hidden items-center gap-3 px-2 pt-2 pb-8 md:flex">
-          <img src="/icon.svg" alt="" className="h-10 w-10" />
-          <div>
-            <div className="text-[17px] leading-tight font-bold tracking-tight">증빙 마감 도우미</div>
-            <div className="text-[13px] text-body">매달의 증빙, 빠짐없이</div>
-          </div>
+          <img src={LOGO_SRC} alt="" className="h-10 w-10" />
+          <div className="text-[20px] leading-tight font-bold tracking-tight">in check</div>
         </div>
         <nav className="flex gap-1 overflow-x-auto px-2 py-2 md:block md:p-0" aria-label="주 메뉴">
           {WORK_MENU.map((m) => <MenuLink key={m.to} {...m} />)}
@@ -77,7 +75,6 @@ export function Layout({ email }: { email: string }) {
               <LogOut aria-hidden size={18} /> 로그아웃
             </button>
           </div>
-          <p className="px-2 pt-2 text-[13px] text-body">데모용 가짜 데이터예요</p>
         </div>
       </aside>
 

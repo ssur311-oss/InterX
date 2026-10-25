@@ -37,7 +37,7 @@ export function Workspace({ children, fit = false }: { children: ReactNode; fit?
 
 /** 버튼 모양. 주요 버튼(primary)은 화면당 1개만 쓴다 */
 export const BTN_PRIMARY =
-  'inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-brand px-6 font-semibold text-white shadow-[0_8px_16px_rgb(45_91_255/0.25)] hover:bg-[#1f4be6] disabled:bg-muted disabled:shadow-none'
+  'inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-brand px-6 font-semibold text-white shadow-[0_8px_16px_color-mix(in_srgb,var(--color-brand)_25%,transparent)] hover:bg-brand-strong disabled:bg-muted disabled:shadow-none'
 export const BTN =
   'inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-white/90 bg-white/70 px-4 font-medium text-ink shadow-sm hover:bg-white disabled:opacity-50'
 export const BTN_GHOST = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 text-body hover:bg-white/70'

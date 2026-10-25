@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Check, FileSpreadsheet, Upload as UploadIcon } from 'lucide-react'
-import { BTN, BTN_GHOST, BTN_PRIMARY, Card, PageHeader, Workspace } from '../components/ui'
+import { BTN_GHOST, BTN_PRIMARY, Card, PageHeader, Workspace } from '../components/ui'
 import { ColumnMapper, missingRequiredColumns } from '../components/upload/ColumnMapper'
 import { PreviewTable, type PreviewRow } from '../components/upload/PreviewTable'
 import { findRequiredDocs } from '../lib/rules/docRules'
@@ -24,6 +24,8 @@ export default function Upload() {
   const [map, setMap] = useState<ColumnMap | null>(null)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
+  // 규칙표 서류 외에 관리자가 줄마다 직접 추가한 서류 (줄 번호 → 서류 이름들)
+  const [extras, setExtras] = useState<Record<number, string[]>>({})
 
   useEffect(() => {
     loadUploadContext().then(setCtx).catch((e: Error) => setMessage({ ok: false, text: `설정을 읽지 못했어요: ${e.message}` }))
@@ -46,7 +48,9 @@ export default function Upload() {
   const ready = rows.filter((r) => r.expense && !r.duplicate)
   const errorCount = rows.filter((r) => r.errors.length).length
   const duplicateCount = rows.filter((r) => r.duplicate).length
-  const docCount = ready.reduce((n, r) => n + r.docs.length, 0)
+  const docsOf = (r: PreviewRow) => [...r.docs, ...(extras[r.rowNumber] ?? [])]
+  const docCount = ready.reduce((n, r) => n + docsOf(r).length, 0)
+  const docSuggestions = [...new Set(ctx?.rules.map((r) => r.doc_type) ?? [])]
   const riskCount = ready.filter((r) => r.flags.length).length
 
   async function onFile(e: ChangeEvent<HTMLInputElement>) {
@@ -57,6 +61,7 @@ export default function Upload() {
     try {
       const sheet = await readSheet(f)
       setFile({ name: f.name, sheet })
+      setExtras({})
       setMapOpen(false)
       setMap(autoMatch(sheet.headers))
     } catch {
@@ -68,7 +73,7 @@ export default function Upload() {
     if (!file) return
     setBusy(true)
     try {
-      await registerExpenses(ready.map((r) => ({ expense: r.expense!, docs: r.docs, noRule: r.noRule })), file.name)
+      await registerExpenses(ready.map((r) => ({ expense: r.expense!, docs: docsOf(r), noRule: r.noRule })), file.name)
       const added = await syncRiskFlags()
       setMessage({ ok: true, text: `집행 ${ready.length}건과 필요 증빙 ${docCount}개를 등록했어요. 위험 표시 ${added}개가 새로 붙었어요.` })
       setFile(null)
@@ -80,17 +85,6 @@ export default function Upload() {
     setBusy(false)
   }
 
-  async function recheck() {
-    setBusy(true)
-    try {
-      const added = await syncRiskFlags()
-      setMessage({ ok: true, text: added ? `위험 표시 ${added}개를 새로 붙였어요.` : '새로 찾은 위험 건이 없어요.' })
-    } catch (e) {
-      setMessage({ ok: false, text: `검사 중 문제가 생겼어요: ${(e as Error).message}` })
-    }
-    setBusy(false)
-  }
-
   return (
     <Workspace fit>
       <PageHeader
@@ -98,7 +92,6 @@ export default function Upload() {
         desc="집행 내역을 올리면 건마다 필요한 서류 목록이 자동으로 생겨요. [등록]을 누르기 전에는 저장되지 않아요."
         action={
           <div className="flex flex-wrap gap-2">
-            <button onClick={recheck} disabled={busy || !ctx} className={BTN}>이미 등록한 건 위험 다시 검사</button>
             <label className={`${BTN_PRIMARY} cursor-pointer ${!ctx ? 'pointer-events-none opacity-50' : ''}`}>
               <UploadIcon aria-hidden size={18} /> 엑셀 파일 고르기
               <input type="file" accept=".xlsx,.xls,.csv" className="sr-only" onChange={onFile} disabled={!ctx} />
@@ -175,7 +168,9 @@ export default function Upload() {
           </p>
           {/* 줄이 많아도 페이지가 아니라 이 표 안에서만 스크롤한다 */}
           <div className="md:min-h-0 md:flex-1">
-            <PreviewTable rows={rows} />
+            <PreviewTable rows={rows} extras={extras} docSuggestions={docSuggestions}
+              onAddDoc={(n, name) => setExtras((cur) => ({ ...cur, [n]: [...(cur[n] ?? []), name] }))}
+              onRemoveDoc={(n, name) => setExtras((cur) => ({ ...cur, [n]: (cur[n] ?? []).filter((d) => d !== name) }))} />
           </div>
           <div className="mt-4 flex justify-end">
             <button onClick={register} disabled={busy || ready.length === 0} className={BTN_PRIMARY}>

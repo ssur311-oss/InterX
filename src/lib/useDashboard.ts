@@ -6,7 +6,15 @@ import { docState, worstState, STATE_ORDER, type DocState, type StoredStatus } f
 import type { RiskCode } from './rules/riskRules'
 import type { BudgetItem, PayMethod, Person, Project, Setting } from './types'
 
-export type DashDoc = { id: string; doc_type: string; status: StoredStatus; planned_date: string | null; state: DocState }
+export type DashDoc = {
+  id: string
+  doc_type: string
+  status: StoredStatus
+  planned_date: string | null
+  state: DocState
+  file_path: string | null // 보관함(Storage) 안 위치
+  renamed_file_name: string | null // 표준 파일명 (RULE.md 7장)
+}
 export type DashRisk = { id: string; rule_code: RiskCode; detail: string | null; resolved: boolean }
 
 export type DashExpense = {
@@ -38,7 +46,7 @@ export type ProjectWithDeadline = Project & { deadline: string | null }
 
 const SELECT =
   'id, project_id, owner_id, category, sub_category, pay_method, amount, paid_at, vendor, description, created_at, no_rule, ' +
-  'people(name), required_docs(id, doc_type, status, planned_date), risk_flags(id, rule_code, detail, resolved)'
+  'people(name), required_docs(id, doc_type, status, planned_date, file_path, renamed_file_name), risk_flags(id, rule_code, detail, resolved)'
 
 /** 저장된 값에서 화면용 상태를 계산한다. '약속일 경과'·'마감 넘는 예정'은 저장하지 않고 매번 계산 (RULE.md 4장) */
 function derive(raw: RawExpense[], today: string, deadlineOf: Map<string, string | null>): DashExpense[] {
@@ -127,5 +135,27 @@ export function useDashboard() {
     )
   }, [])
 
-  return { expenses, projects, people, settings, budget, today, error, loading, reload, patchDoc }
+  /** 파일을 연결한 서류 칸을 화면에 바로 반영 (목록 순서는 그대로) */
+  const patchDocFile = useCallback((docId: string, file_path: string, renamed_file_name: string) => {
+    setRaw((rows) =>
+      rows.map((e) =>
+        e.required_docs.some((d) => d.id === docId)
+          ? { ...e, required_docs: e.required_docs.map((d) => (d.id === docId ? { ...d, file_path, renamed_file_name } : d)) }
+          : e,
+      ),
+    )
+  }, [])
+
+  /** 직접 추가한 서류 칸을 화면에 바로 붙인다 */
+  const appendDoc = useCallback((expenseId: string, id: string, doc_type: string) => {
+    setRaw((rows) =>
+      rows.map((e) =>
+        e.id === expenseId
+          ? { ...e, required_docs: [...e.required_docs, { id, doc_type, status: 'missing' as const, planned_date: null, file_path: null, renamed_file_name: null }] }
+          : e,
+      ),
+    )
+  }, [])
+
+  return { expenses, projects, people, settings, budget, today, error, loading, reload, patchDoc, patchDocFile, appendDoc }
 }

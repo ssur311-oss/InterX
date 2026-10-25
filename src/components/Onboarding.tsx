@@ -43,7 +43,7 @@ const Points = ({ items }: { items: ReactNode[] }) => (
 const STEPS: Step[] = [
   {
     Icon: Sparkles,
-    title: '증빙 마감 도우미예요',
+    title: 'in check예요',
     body: (
       <>
         <p>매달 사업비 증빙을 모으고, 빠진 서류를 챙기고, 마감을 지키는 일을 도와줘요. 큰 흐름은 세 단계예요.</p>

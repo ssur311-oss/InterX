@@ -13,6 +13,7 @@ import { BTN_PRIMARY, Card, CardTitle, Empty, PageHeader, Workspace } from '../c
 import { budgetByCategory, budgetByProject, budgetTotal } from '../lib/budget'
 import { countViews, type SummaryView } from '../lib/dashboardFilter'
 import { formatDate } from '../lib/format'
+import { greeting } from '../lib/greeting'
 import { STATE_ORDER, type DocState } from '../lib/rules/docStatus'
 import { useDashboard } from '../lib/useDashboard'
 import { useDocToggle } from '../lib/useDocToggle'
@@ -44,7 +45,7 @@ export default function Dashboard() {
   if (expenses.length === 0) {
     return (
       <Workspace>
-        <PageHeader title="대시보드" />
+        <PageHeader title={greeting(today)} />
         <Empty
           icon={<FileSpreadsheet size={40} />}
           title="아직 등록된 집행 건이 없어요"
@@ -58,7 +59,7 @@ export default function Dashboard() {
   // 아래 화면을 바꾸는 버튼. 요약 카드 3개 옆 남는 자리에 둔다
   const panelBtn = (key: Panel, Icon: typeof Wallet, label: string, value: string) => (
     <button onClick={() => setPanel(key)} aria-pressed={panel === key}
-      className={`rounded-2xl p-5 text-left ${panel === key ? 'bg-brand text-white shadow-[0_8px_24px_rgb(45_91_255/0.3)]' : 'glass hover:bg-white/80'}`}>
+      className={`rounded-2xl p-5 text-left ${panel === key ? 'bg-brand text-white shadow-[0_8px_24px_color-mix(in_srgb,var(--color-brand)_30%,transparent)]' : 'glass hover:bg-white/80'}`}>
       <div className={`flex items-center gap-2 text-[15px] font-medium ${panel === key ? 'text-white' : 'text-body'}`}>
         <Icon aria-hidden size={18} className={panel === key ? '' : 'text-brand'} />
         {label}
@@ -73,7 +74,7 @@ export default function Dashboard() {
   return (
     <Workspace>
       <PageHeader
-        title="대시보드"
+        title={greeting(today)}
         desc={
           <>
             {formatDate(today)} 기준 ·{' '}

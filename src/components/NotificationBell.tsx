@@ -75,7 +75,7 @@ export function NotificationBell() {
         className="relative flex h-11 w-11 items-center justify-center rounded-lg hover:bg-white/60">
         <Bell aria-hidden size={20} className="text-ink" />
         {alerts.length > 0 && (
-          <span className="absolute top-1 right-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-danger bg-white px-1 text-[11px] leading-none font-bold text-danger">
+          <span className="absolute top-1 right-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-danger px-1 text-[11px] leading-none font-bold text-white">
             {alerts.length}
           </span>
         )}

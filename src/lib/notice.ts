@@ -4,7 +4,7 @@ import { formatDate } from './format'
 import type { DashExpense, ProjectWithDeadline } from './useDashboard'
 
 // 통보·재통보 (RULE.md 6장, 10장). 지금은 규칙으로 만든 기본 문장, AI 기능을 붙이면 초안을 AI가 쓴다.
-export const RE_NOTICE_HOURS = 24
+// 같은 사람에게 보내는 횟수·간격 제한은 사용자 요청으로 두지 않는다 (재통보 여부는 문장과 이력 종류에만 쓴다)
 
 /** 정중하게, 무엇이/왜/언제까지 + 어려우면 편하게 말해달라는 마무리 */
 export function noticeTemplate(name: string, expenses: DashExpense[], projects: ProjectWithDeadline[], isRe: boolean): string {
@@ -56,4 +56,16 @@ export async function sendNotice(personId: string, text: string, expenseIds: str
     expenseIds.map((id) => ({ expense_id: id, kind: isRe ? 're_notice_sent' : 'notice_sent', content: text, source: 'manual' })),
   )
   if (log.error) throw log.error
+}
+
+/** 이 사람에게 지금까지 보낸 통보 횟수 (0이면 첫 통보) */
+export async function noticeCount(expenseIds: string[]): Promise<number> {
+  if (!supabase || !expenseIds.length) return 0
+  const { count } = await supabase
+    .from('activity_log')
+    .select('id', { count: 'exact', head: true })
+    .in('expense_id', expenseIds)
+    .in('kind', ['notice_sent', 're_notice_sent'])
+  // 한 번 보낼 때 집행 건마다 기록하므로, 건수로 나눠 대략의 횟수로 본다
+  return Math.round((count ?? 0) / Math.max(1, expenseIds.length))
 }

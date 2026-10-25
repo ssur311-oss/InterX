@@ -5,7 +5,7 @@ import { PageHeader, Workspace } from '../components/ui'
 export default function Assistant() {
   return (
     <Workspace fit>
-      <PageHeader title="AI 도우미" desc="모니를 눌러 보세요. 무엇을 도와줄 수 있는지 알려 줄 거예요." />
+      <PageHeader title="체크메이트 모니" desc="모니를 눌러 보세요. 무엇을 도와줄 수 있는지 알려 줄 거예요." />
       <AiAssistantPanel />
     </Workspace>
   )

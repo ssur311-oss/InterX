@@ -31,3 +31,18 @@ export async function setDocSubmitted(expenseId: string, doc: Pick<DashDoc, 'id'
   if (res.error) throw res.error
   return status
 }
+
+/**
+ * 규칙표에 없는 서류를 관리자가 직접 추가한다 (이례적으로 더 받아야 하는 서류).
+ * 이력을 먼저 남기고 서류 칸을 만든다. 새 칸은 '미제출'로 시작한다
+ */
+export async function addRequiredDoc(expenseId: string, docType: string) {
+  if (!supabase) throw new Error('Supabase 연결이 없어요')
+  const log = await supabase.from('activity_log').insert({
+    expense_id: expenseId, kind: 'memo', content: `[서류 추가] ${docType} — 관리자가 직접 추가`, source: 'manual',
+  })
+  if (log.error) throw log.error
+  const ins = await supabase.from('required_docs').insert({ expense_id: expenseId, doc_type: docType, status: 'missing' }).select('id').single()
+  if (ins.error) throw ins.error
+  return ins.data.id as string
+}

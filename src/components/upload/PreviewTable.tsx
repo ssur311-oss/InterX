@@ -2,6 +2,7 @@ import { formatDate, formatTime, formatWon } from '../../lib/format'
 import type { RiskFlag } from '../../lib/rules/riskRules'
 import { PAY_METHOD_LABEL } from '../../lib/types'
 import type { ParsedRow } from '../../lib/upload/parseRows'
+import { AddDocInline } from '../AddDocInline'
 import { NoRuleTag, RiskTag } from '../RiskTag'
 
 export type PreviewRow = ParsedRow & { docs: string[]; noRule: boolean; flags: RiskFlag[] }
@@ -9,10 +10,19 @@ export type PreviewRow = ParsedRow & { docs: string[]; noRule: boolean; flags: R
 function RowStatus({ row }: { row: PreviewRow }) {
   if (row.errors.length) return <span className="text-red-700">❌ 오류</span>
   if (row.duplicate) return <span className="text-gray-500">🔁 이미 등록됨</span>
-  return <span className="text-green-700">✅ 등록</span>
+  return <span className="text-ok">✅ 등록</span>
 }
 
-export function PreviewTable({ rows }: { rows: PreviewRow[] }) {
+type Props = {
+  rows: PreviewRow[]
+  /** 관리자가 줄마다 직접 추가한 서류 (줄 번호 → 서류 이름들) */
+  extras: Record<number, string[]>
+  onAddDoc: (rowNumber: number, name: string) => void
+  onRemoveDoc: (rowNumber: number, name: string) => void
+  docSuggestions: string[]
+}
+
+export function PreviewTable({ rows, extras, onAddDoc, onRemoveDoc, docSuggestions }: Props) {
   return (
     <div className="max-h-full overflow-auto rounded-xl border border-white/90 bg-white/60">
       <table className="w-full text-sm">
@@ -55,6 +65,14 @@ export function PreviewTable({ rows }: { rows: PreviewRow[] }) {
                       {r.docs.map((d) => (
                         <span key={d} className="rounded bg-gray-100 px-2 py-0.5 text-xs">{d}</span>
                       ))}
+                      {(extras[r.rowNumber] ?? []).map((d) => (
+                        <span key={d} className="inline-flex items-center gap-1 rounded bg-brand-soft px-2 py-0.5 text-xs font-medium text-brand" title="직접 추가한 서류">
+                          {d}
+                          <button type="button" onClick={() => onRemoveDoc(r.rowNumber, d)} aria-label={`${d} 빼기`} className="rounded px-0.5 hover:bg-white/70">×</button>
+                        </span>
+                      ))}
+                      <AddDocInline existing={[...r.docs, ...(extras[r.rowNumber] ?? [])]} suggestions={docSuggestions}
+                        onAdd={(name) => onAddDoc(r.rowNumber, name)} />
                       {r.noRule && <NoRuleTag />}
                       {r.flags.map((f) => <RiskTag key={f.rule_code} code={f.rule_code} detail={f.detail} />)}
                     </div>

@@ -1,29 +1,58 @@
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Archive, Download, ListChecks, PartyPopper, Search } from 'lucide-react'
+import { Archive, Download, FolderArchive, ListChecks, PartyPopper, Search } from 'lucide-react'
 import { CompletedBox } from '../components/checklist/CompletedBox'
+import { FilesBox } from '../components/checklist/FilesBox'
 import { DateSections, type DateSection } from '../components/checklist/DateSections'
 import { Filters } from '../components/dashboard/Filters'
 import { Toast } from '../components/Toast'
 import { BTN, BTN_PRIMARY, Empty, PageHeader, Workspace } from '../components/ui'
 import { applyFilter, countViews, EMPTY_FILTER, VIEW_LABEL, type Filter, type SummaryView, type View } from '../lib/dashboardFilter'
 import { seoulParts } from '../lib/date'
-import { isComplete } from '../lib/docCheck'
+import { addRequiredDoc, isComplete } from '../lib/docCheck'
+import { attachFile, openFile } from '../lib/evidenceFile'
 import { exportCompleted } from '../lib/exportCompleted'
-import { useDashboard } from '../lib/useDashboard'
+import { useDashboard, type DashDoc, type DashExpense } from '../lib/useDashboard'
 import { useDocToggle } from '../lib/useDocToggle'
 
 const VIEWS: View[] = ['all', 'overdue', 'today', 'over_deadline']
+// 처리 중 / 완료함 / 파일 보관함(F8)
+type Box = 'pending' | 'done' | 'files'
 
 export default function Checklist() {
-  const { expenses, projects, people, today, error, loading, reload, patchDoc } = useDashboard()
+  const { expenses, projects, people, today, error, loading, reload, patchDoc, patchDocFile, appendDoc } = useDashboard()
   const [params] = useSearchParams()
   const initialView = params.get('view') as View | null
   const [filter, setFilter] = useState<Filter>({ ...EMPTY_FILTER, view: initialView && VIEWS.includes(initialView) ? initialView : 'all' })
-  const [box, setBox] = useState<'pending' | 'done'>('pending')
+  const [box, setBox] = useState<Box>('pending')
   const [query, setQuery] = useState('')
 
-  const { toggle, leaving, toast, closeToast } = useDocToggle(patchDoc, reload)
+  const { toggle, leaving, toast, closeToast, say } = useDocToggle(patchDoc, reload)
+
+  // 서류 칸에 파일을 올리면 보관함에 저장 + 표준 이름. 제출 체크는 관리자에게 묻는다 (RULE.md 7장)
+  async function onFile(e: DashExpense, d: DashDoc, file: File) {
+    try {
+      const short = projects.find((p) => p.id === e.project_id)?.short_name ?? ''
+      const { path, name } = await attachFile(file, { expenseId: e.id, projectShort: short, category: e.category, paidAt: e.paid_at, amount: e.amount, vendor: e.vendor }, d)
+      patchDocFile(d.id, path, name)
+      if (d.status !== 'submitted') say(`파일을 보관했어요 (${name}). 제출로 체크할까요?`, { action: { label: '제출로 체크', run: () => toggle(e, d, true) } })
+      else say(`파일을 보관했어요 (${name}).`)
+    } catch (err) {
+      say((err as Error).message, { tone: 'error' })
+    }
+  }
+  // 규칙표에 없는 서류를 직접 추가. 완료함에 있던 건이면 다시 처리 중으로 돌아간다
+  async function onAddDoc(e: DashExpense, name: string) {
+    try {
+      const id = await addRequiredDoc(e.id, name)
+      appendDoc(e.id, id, name)
+      say(isComplete(e) ? `'${name}'을(를) 추가해서 이 건은 다시 처리 중으로 옮겼어요.` : `'${name}' 서류 칸을 추가했어요.`)
+    } catch (err) {
+      say(`추가하지 못했어요: ${(err as Error).message}`, { tone: 'error' })
+    }
+  }
+  const docSuggestions = [...new Set(expenses.flatMap((x) => x.required_docs.map((d) => d.doc_type)))].sort()
+  const onOpen = (d: DashDoc) => { if (d.file_path) openFile(d.file_path).catch((err: Error) => say(err.message, { tone: 'error' })) }
 
   const searched = useMemo(
     () => (query.trim() ? expenses.filter((e) => `${e.description ?? ''} ${e.vendor ?? ''}`.includes(query.trim())) : expenses),
@@ -49,7 +78,9 @@ export default function Checklist() {
   if (loading) return <Workspace><p className="text-body">불러오는 중…</p></Workspace>
   if (error) return <Workspace><p className="text-danger">데이터를 불러오지 못했어요: {error}. 새로고침해 주세요.</p></Workspace>
 
-  const tabBtn = (key: 'pending' | 'done', label: string, n: number, Icon: typeof Archive) => (
+  const fileCount = scoped.reduce((n, e) => n + e.required_docs.filter((d) => d.file_path).length, 0)
+
+  const tabBtn = (key: Box, label: string, n: number, Icon: typeof Archive) => (
     <button onClick={() => setBox(key)} aria-pressed={box === key}
       className={`flex min-h-12 items-center gap-2 rounded-xl px-5 font-semibold ${box === key ? 'bg-white text-ink shadow-sm' : 'text-body hover:bg-white/50'}`}>
       <Icon aria-hidden size={18} className={box === key ? 'text-brand' : ''} />
@@ -69,6 +100,7 @@ export default function Checklist() {
       <div className="glass mb-6 inline-flex gap-1 rounded-2xl p-1">
         {tabBtn('pending', '처리 중', pendingAll.length, ListChecks)}
         {tabBtn('done', '완료함', done.length, Archive)}
+        {tabBtn('files', '파일 보관함', fileCount, FolderArchive)}
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -112,7 +144,8 @@ export default function Checklist() {
           ) : (
             // 조건이 바뀌면 처음 구간부터 다시 보여준다
             <DateSections key={`${filter.view}|${filter.projectId}|${filter.personId}|${query}`}
-              sections={sections} today={today} projectName={projectName} leaving={leaving} onToggle={toggle} />
+              sections={sections} today={today} projectName={projectName} leaving={leaving} onToggle={toggle} onFile={onFile} onOpen={onOpen}
+              onAddDoc={onAddDoc} docSuggestions={docSuggestions} />
           )}
         </>
       )}
@@ -132,9 +165,15 @@ export default function Checklist() {
                 <Download aria-hidden size={18} /> 엑셀로 내보내기
               </button>
             </div>
-            <CompletedBox expenses={done} projects={projects} onToggle={toggle} />
+            <CompletedBox expenses={done} projects={projects} onToggle={toggle} onFile={onFile} onOpen={onOpen}
+              onAddDoc={onAddDoc} docSuggestions={docSuggestions} />
           </>
         ))}
+
+      {box === 'files' && (
+        <FilesBox expenses={scoped} projects={projects} today={today}
+          projectLabel={filter.projectId ? (projects.find((p) => p.id === filter.projectId)?.short_name ?? '전체') : '전체'} />
+      )}
 
       <Toast toast={toast} onClose={closeToast} />
     </Workspace>

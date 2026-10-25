@@ -8,10 +8,14 @@ type Props = {
   expenses: DashExpense[]
   projects: ProjectWithDeadline[]
   onToggle: (e: DashExpense, doc: DashDoc, checked: boolean) => void
+  onFile?: (e: DashExpense, d: DashDoc, file: File) => Promise<void>
+  onOpen?: (d: DashDoc) => void
+  onAddDoc?: (e: DashExpense, name: string) => Promise<void>
+  docSuggestions?: string[]
 }
 
 /** 완료함: 서류가 다 모인 집행 건을 과제별로 한곳에 모아 둔다 */
-export function CompletedBox({ expenses, projects, onToggle }: Props) {
+export function CompletedBox({ expenses, projects, onToggle, onFile, onOpen, onAddDoc, docSuggestions }: Props) {
   const [open, setOpen] = useState<string | null>(null)
   const groups = projects
     .map((p) => ({ p, rows: expenses.filter((e) => e.project_id === p.id) }))
@@ -50,7 +54,8 @@ export function CompletedBox({ expenses, projects, onToggle }: Props) {
                 {open === e.id && (
                   <div className="px-4 pb-4">
                     <ExpenseCard expense={e} projectName={p.short_name}
-                      onToggle={(d, c) => onToggle(e, d, c)} />
+                      onToggle={(d, c) => onToggle(e, d, c)} onFile={onFile && ((d, f) => onFile(e, d, f))} onOpen={onOpen}
+                      onAddDoc={onAddDoc && ((name) => onAddDoc(e, name))} docSuggestions={docSuggestions} />
                     <p className="mt-2 px-2 text-[13px] text-body">체크를 풀면 이 건은 다시 '처리 중'으로 돌아가요.</p>
                   </div>
                 )}
