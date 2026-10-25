@@ -6,6 +6,7 @@ import { Layout } from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import Login from './pages/Login'
 import Settings from './pages/Settings'
+import Upload from './pages/Upload'
 
 function NotConfigured() {
   return (
@@ -41,6 +42,7 @@ export default function App() {
       <Routes>
         <Route element={<Layout email={session.user.email ?? ''} />}>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/upload" element={<Upload />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

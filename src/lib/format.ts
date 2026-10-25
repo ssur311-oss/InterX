@@ -1,3 +1,5 @@
+import { seoulParts, weekdayOf } from './date'
+
 // 표기 규칙: RULE.md 8장
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 
@@ -8,7 +10,13 @@ export function formatWon(amount: number): string {
 
 /** "2026-11-03" 또는 ISO 일시 → "11/3(화)" (Asia/Seoul 기준) */
 export function formatDate(value: string): string {
-  const d = new Date(value.length === 10 ? `${value}T00:00:00+09:00` : value)
-  const seoul = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }))
-  return `${seoul.getMonth() + 1}/${seoul.getDate()}(${WEEKDAYS[seoul.getDay()]})`
+  const date = value.length === 10 ? value : seoulParts(value).date
+  const [, m, d] = date.split('-').map(Number)
+  return `${m}/${d}(${WEEKDAYS[weekdayOf(date)]})`
+}
+
+/** ISO 일시 → "14:05" (Asia/Seoul 기준) */
+export function formatTime(value: string): string {
+  const { hour, minute } = seoulParts(value)
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
 }

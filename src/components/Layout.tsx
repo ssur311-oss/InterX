@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 
 const MENU = [
   { to: '/', label: '현황판' },
+  { to: '/upload', label: '엑셀 업로드' },
   { to: '/settings', label: '설정' },
 ]
 

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { formatDate, formatWon } from '../lib/format'
 import { StatusBadge, type DocStatus } from '../components/StatusBadge'
+import { NoRuleTag, RiskTag } from '../components/RiskTag'
+import type { RiskCode } from '../lib/rules/riskRules'
 
 type ExpenseRow = {
   id: string
@@ -12,9 +14,11 @@ type ExpenseRow = {
   paid_at: string
   vendor: string | null
   description: string | null
+  no_rule: boolean
   projects: { short_name: string } | null
   people: { name: string } | null
   required_docs: { id: string; doc_type: string; status: DocStatus }[]
+  risk_flags: { id: string; rule_code: RiskCode; detail: string | null; resolved: boolean }[]
 }
 
 export default function Dashboard() {
@@ -26,7 +30,7 @@ export default function Dashboard() {
     if (!supabase) return
     supabase
       .from('expenses')
-      .select('id, category, sub_category, pay_method, amount, paid_at, vendor, description, projects(short_name), people(name), required_docs(id, doc_type, status)')
+      .select('id, category, sub_category, pay_method, amount, paid_at, vendor, description, no_rule, projects(short_name), people(name), required_docs(id, doc_type, status), risk_flags(id, rule_code, detail, resolved)')
       .order('paid_at', { ascending: false })
       .then(({ data, error }) => {
         if (error) setError(error.message)
@@ -40,12 +44,13 @@ export default function Dashboard() {
 
   const docs = rows.flatMap((r) => r.required_docs)
   const count = (s: DocStatus) => docs.filter((d) => d.status === s).length
+  const riskCount = rows.filter((r) => r.risk_flags.some((f) => !f.resolved)).length
 
   return (
     <main className="mx-auto max-w-6xl p-6">
       <h1 className="text-2xl font-bold">증빙 현황판</h1>
       <p className="mt-1 text-sm text-gray-600">
-        집행 {rows.length}건 · 증빙 {docs.length}개 — ✅ {count('submitted')} · ⏳ {count('scheduled')} · ❌ {count('missing')}
+        집행 {rows.length}건 · 증빙 {docs.length}개 — ✅ {count('submitted')} · ⏳ {count('scheduled')} · ❌ {count('missing')} · ⚠️ 위험 확인 필요 {riskCount}건
       </p>
 
       <div className="mt-4 overflow-x-auto rounded border border-gray-200 bg-white">
@@ -75,6 +80,12 @@ export default function Dashboard() {
                   <div className="text-xs text-gray-500">
                     {r.vendor} · {r.pay_method === 'card' ? '카드' : '계좌이체'}
                   </div>
+                  {(r.risk_flags.length > 0 || r.no_rule) && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {r.risk_flags.map((f) => <RiskTag key={f.id} code={f.rule_code} detail={f.detail} resolved={f.resolved} />)}
+                      {r.no_rule && <NoRuleTag />}
+                    </div>
+                  )}
                 </td>
                 <td className="whitespace-nowrap px-3 py-2 text-right">{formatWon(r.amount)}</td>
                 <td className="whitespace-nowrap px-3 py-2">{r.people?.name}</td>
