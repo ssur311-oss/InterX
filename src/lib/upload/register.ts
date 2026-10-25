@@ -38,7 +38,7 @@ export async function loadUploadContext(): Promise<UploadContext> {
 export type RegisterItem = { expense: NewExpense; docs: string[]; noRule: boolean }
 
 /** 관리자가 [등록]을 눌렀을 때만 호출: 집행 건 → 필요 증빙 → 처리 이력 순으로 저장 */
-export async function registerExpenses(items: RegisterItem[], fileName: string): Promise<void> {
+export async function registerExpenses(items: RegisterItem[], fileName: string, via = '엑셀 업로드'): Promise<void> {
   const s = db()
   await must(s.from('expenses').insert(items.map((i) => ({ ...i.expense, no_rule: i.noRule }))))
   await must(
@@ -51,7 +51,7 @@ export async function registerExpenses(items: RegisterItem[], fileName: string):
       items.map((i) => ({
         expense_id: i.expense.id,
         kind: 'memo',
-        content: `엑셀 업로드로 등록 (${fileName})${i.noRule ? ' — 규칙 없음, 결제 증빙만 생성' : ''}`,
+        content: `${via}로 등록 (${fileName})${i.noRule ? ' — 규칙 없음, 결제 증빙만 생성' : ''}`,
         source: 'system',
       })),
     ),

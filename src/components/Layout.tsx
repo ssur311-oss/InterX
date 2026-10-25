@@ -46,7 +46,13 @@ export function Layout({ email }: { email: string }) {
 
   return (
     // 프로그램 창처럼: 화면 전체를 고정하고 오른쪽 작업 영역만 스크롤한다
-    <div className="flex h-full flex-col md:flex-row">
+    <div className="flex h-full flex-col">
+      {/* 설치한 앱에서 창 맨 위 검은 제목줄 대신 쓰는 투명한 줄. 끌어서 창을 옮길 수 있다 (index.css .titlebar) */}
+      <div className="titlebar" aria-hidden>
+        <img src="/icon.svg" alt="" className="h-4 w-4" />
+        <span>증빙 마감 도우미</span>
+      </div>
+    <div className="flex min-h-0 flex-1 flex-col md:flex-row">
       <aside className="glass z-10 md:m-4 md:mr-0 md:flex md:w-[240px] md:shrink-0 md:flex-col md:rounded-3xl md:p-4">
         <div className="hidden items-center gap-3 px-2 pt-2 pb-8 md:flex">
           <img src="/icon.svg" alt="" className="h-10 w-10" />
@@ -91,6 +97,7 @@ export function Layout({ email }: { email: string }) {
       </main>
 
       {guide && <Onboarding onClose={() => setGuide(false)} />}
+    </div>
     </div>
   )
 }

@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 import { Layout } from './components/Layout'
 import Assistant from './pages/Assistant'
+import AssistantDemo from './pages/AssistantDemo'
 import Calendar from './pages/Calendar'
 import Checklist from './pages/Checklist'
 import Dashboard from './pages/Dashboard'
@@ -49,6 +50,7 @@ export default function App() {
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/upload" element={<Upload />} />
           <Route path="/assistant" element={<Assistant />} />
+          <Route path="/assistant/demo" element={<AssistantDemo />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

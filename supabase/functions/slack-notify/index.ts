@@ -14,7 +14,9 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
 
   // 로그인한 관리자 권한으로 DB를 읽는다 (RLS 그대로 적용)
-  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
+  // 새 방식 키(publishable)만 쓰는 프로젝트는 SUPABASE_ANON_KEY가 없을 수 있어, 앱이 보낸 apikey를 대신 쓴다
+  const apiKey = Deno.env.get('SUPABASE_ANON_KEY') || req.headers.get('apikey') || ''
+  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, apiKey, {
     global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } },
   })
   const { data: user } = await supabase.auth.getUser()

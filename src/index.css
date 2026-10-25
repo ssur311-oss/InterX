@@ -16,8 +16,12 @@
 }
 
 html,
-body,
+body {
+  height: 100%;
+}
+/* 창 크기에 맞춘 전체 축소 (lib/uiScale.ts가 --ui-zoom을 정함). 높이 %는 축소 영향을 받지 않아 100% 그대로 둔다 */
 #root {
+  zoom: var(--ui-zoom, 1);
   height: 100%;
 }
 
@@ -151,3 +155,23 @@ body {
 .fc .fc-multimonth { border: 0; }
 .fc .fc-multimonth-title { font-size: 15px; padding: 8px 0; }
 .fc .fc-multimonth-daygrid { background: rgb(255 255 255 / 0.5); border-radius: 8px; }
+
+/* 설치한 앱(창 컨트롤 오버레이)에서만: 검은 제목줄 자리를 앱 배경으로 채우고, 오른쪽 위 – □ × 버튼 자리는 비워 둔다 */
+.titlebar { display: none; }
+@media (display-mode: window-controls-overlay) {
+  .titlebar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    height: env(titlebar-area-height, 33px);
+    padding-left: calc(env(titlebar-area-x, 0px) + 16px);
+    width: env(titlebar-area-width, 100%);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-body);
+    -webkit-app-region: drag;
+    app-region: drag;
+    user-select: none;
+  }
+}

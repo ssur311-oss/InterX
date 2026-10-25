@@ -1,3 +1,4 @@
+import { invokeFunction } from './invokeFunction'
 import { supabase } from './supabase'
 import { formatDate } from './format'
 import type { DashExpense, ProjectWithDeadline } from './useDashboard'
@@ -49,9 +50,7 @@ export async function lastNoticeAt(expenseIds: string[]): Promise<string | null>
 /** 관리자가 [보내기]를 눌렀을 때만 실행. 슬랙 발송은 Edge Function에서만 (키를 화면에 두지 않음) */
 export async function sendNotice(personId: string, text: string, expenseIds: string[], isRe: boolean) {
   if (!supabase) throw new Error('Supabase 연결이 없어요')
-  const { data, error } = await supabase.functions.invoke('slack-notify', { body: { person_id: personId, text } })
-  if (error) throw new Error('슬랙 발송 기능(slack-notify)이 아직 연결되지 않았어요')
-  if (!data?.ok) throw new Error(data?.error ?? '슬랙이 메시지를 받지 않았어요')
+  await invokeFunction('slack-notify', { person_id: personId, text }, '슬랙 발송')
   // 발송 기록은 감사 소명 근거라 집행 건마다 남긴다 (RULE.md 6장)
   const log = await supabase.from('activity_log').insert(
     expenseIds.map((id) => ({ expense_id: id, kind: isRe ? 're_notice_sent' : 'notice_sent', content: text, source: 'manual' })),

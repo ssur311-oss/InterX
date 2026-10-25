@@ -106,7 +106,7 @@ export function NotificationBell() {
             </ul>
           </div>
         </div>,
-        document.body,
+        document.getElementById('root') ?? document.body,
       )}
     </>
   )
