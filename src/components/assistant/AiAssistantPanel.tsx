@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type DragEvent } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { AiAssistantCharacter, type MoniState } from './AiAssistantCharacter'
 import { FeaturePanel } from './FeaturePanel'
@@ -79,6 +79,8 @@ export function AiAssistantPanel() {
         if (moveToken.current === token) setMoving(false)
       }, MOVE_MS + 60)
     }
+    // 작업 화면을 닫으면 끌어다 놓은 파일도 잊는다 (다시 열 때 같은 파일을 또 읽지 않게)
+    if (next !== 'feature') setDropped(null)
     setPhase(next)
   }
 
@@ -89,9 +91,45 @@ export function AiAssistantPanel() {
     ...rect,
     transition: moving ? ['left', 'top', 'width', 'height'].map((p) => `${p} ${MOVE_MS}ms cubic-bezier(0.65, 0, 0.35, 1)`).join(', ') : 'none',
   } : undefined
+  // 파일을 끌어다 놓으면 모니를 누르지 않아도 '증빙 서류 올리기'가 열리고 바로 읽기 시작한다.
+  // 저장은 그 화면에서 확인한 뒤 관리자 버튼으로만 (RULE.md 0장)
+  const [dragging, setDragging] = useState(false)
+  const dragDepth = useRef(0)
+  const [dropped, setDropped] = useState<{ id: number; files: File[] } | null>(null)
+  const hasFiles = (e: DragEvent) => e.dataTransfer.types.includes('Files')
+  function onDragEnter(e: DragEvent) {
+    if (!hasFiles(e)) return
+    e.preventDefault()
+    dragDepth.current++
+    setDragging(true)
+  }
+  function onDragOver(e: DragEvent) {
+    if (!hasFiles(e)) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'copy'
+  }
+  // 안쪽 요소를 지날 때마다 leave가 생기므로 들어온 횟수로 센다
+  function onDragLeave(e: DragEvent) {
+    if (!hasFiles(e)) return
+    dragDepth.current = Math.max(0, dragDepth.current - 1)
+    if (!dragDepth.current) setDragging(false)
+  }
+  function onDrop(e: DragEvent) {
+    if (!hasFiles(e)) return
+    e.preventDefault()
+    dragDepth.current = 0
+    setDragging(false)
+    const files = [...e.dataTransfer.files]
+    if (!files.length) return
+    setPicked('receipt')
+    changePhase('feature')
+    setDropped({ id: Date.now(), files })
+  }
+
   const feature = FEATURES.find((f) => f.key === picked)
-  // 상태 우선순위: 작업 결과(mood) > 마우스를 올려 둠(listening) > 기본
-  const state: MoniState = mood !== 'idle' ? mood : hover && !small ? 'listening' : 'idle'
+  // 상태 우선순위: 일하는 중 > 파일을 끌고 옴 > 작업 결과(mood) > 마우스를 올려 둠(listening) > 기본
+  const working = mood === 'thinking' || mood === 'reading'
+  const state: MoniState = dragging && !working ? 'ready' : mood !== 'idle' ? mood : hover && !small ? 'listening' : 'idle'
 
   function onCharacterClick() {
     if (phase === 'menu') {
@@ -109,10 +147,11 @@ export function AiAssistantPanel() {
   }
 
   return (
-    <div ref={stage} className="glass relative h-[640px] overflow-hidden rounded-3xl md:h-auto md:min-h-0 md:flex-1">
+    <div ref={stage} onDragEnter={onDragEnter} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
+      className={`glass relative h-[640px] overflow-hidden rounded-3xl md:h-auto md:min-h-0 md:flex-1 ${dragging ? 'ring-4 ring-brand/40 ring-inset' : ''}`}>
       {small && picked && (
         <div className="absolute inset-4 right-4 bottom-4 md:right-64">
-          <FeaturePanel feature={picked} onBack={() => changePhase('menu')} onMood={react} />
+          <FeaturePanel feature={picked} onBack={() => changePhase('menu')} onMood={react} incoming={dropped} />
         </div>
       )}
 
@@ -121,11 +160,12 @@ export function AiAssistantPanel() {
       <div className="absolute" style={boxStyle}>
         {/* 말풍선 */}
         {!small && (
-          <div role="status" key={`${phase}-${picked}`}
+          <div role="status" key={`${phase}-${picked}-${dragging}`}
             className="animate-pop absolute bottom-full left-1/2 z-10 mb-2 w-max max-w-[340px] -translate-x-1/2 rounded-2xl bg-white px-5 py-3 text-[15px] leading-relaxed shadow-lg">
-            {phase === 'idle' && '안녕하세요, 모니예요! 저를 클릭해 주세요.'}
-            {phase === 'menu' && !feature && '무엇을 도와드릴까요? 아래 버튼을 눌러 보세요!'}
-            {phase === 'menu' && feature && (
+            {dragging && '여기 놓아 주세요! 무슨 서류인지 바로 읽어 볼게요.'}
+            {!dragging && phase === 'idle' && '안녕하세요, 모니예요! 저를 클릭해 주세요.'}
+            {!dragging && phase === 'menu' && !feature && '무엇을 도와드릴까요? 아래 버튼을 눌러 보세요!'}
+            {!dragging && phase === 'menu' && feature && (
               <>
                 {feature.say}
                 <button onClick={() => changePhase('feature')} className="mt-2 flex min-h-11 items-center gap-1 font-semibold text-brand hover:underline">

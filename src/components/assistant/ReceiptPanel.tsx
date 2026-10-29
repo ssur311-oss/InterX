@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { FileText, ImagePlus, Loader2, RotateCcw, Sparkles, X } from 'lucide-react'
 import { docTypesOf, isPdf, MAX_PDF_MB, missingFields, readReceipts, registerReceipts, toDraft, type ReceiptDraft } from '../../lib/aiReceipt'
@@ -16,7 +16,13 @@ const MAX = 8
  * 기존 집행 건의 서류 칸에 체크하거나, 새 집행 건으로 등록 (엑셀 등록과 같은 규칙)
  */
 // 모니 표정은 보여주기만 한다. 저장은 이 화면의 [처리] 버튼으로만
-export function ReceiptPanel({ onMood }: { onMood?: (s: MoniState, ms?: number) => void }) {
+type Props = {
+  onMood?: (s: MoniState, ms?: number) => void
+  /** 모니 화면에 끌어다 놓은 파일. 받으면 바로 읽기까지 한다 (저장은 여전히 [처리] 버튼으로만) */
+  incoming?: { id: number; files: File[] } | null
+}
+
+export function ReceiptPanel({ onMood, incoming }: Props) {
   const [ctx, setCtx] = useState<UploadContext | null>(null)
   // 기존 건에 붙일 때 후보로 쓸 집행 건(아직 안 낸 서류 포함)
   const { expenses, reload } = useDashboard()
@@ -30,15 +36,41 @@ export function ReceiptPanel({ onMood }: { onMood?: (s: MoniState, ms?: number) 
     loadUploadContext().then(setCtx).catch((e: Error) => setMsg({ ok: false, text: `설정을 읽지 못했어요: ${e.message}` }))
   }, [])
 
-  function onPick(e: ChangeEvent<HTMLInputElement>) {
-    const all = [...(e.target.files ?? [])].filter((f) => f.type.startsWith('image/') || isPdf(f))
-    e.target.value = ''
+  /** 사진·PDF만 받아 목록에 더하고, 더한 뒤의 목록을 돌려준다 */
+  function addFiles(all: File[]): Shot[] {
+    const usable = all.filter((f) => f.type.startsWith('image/') || isPdf(f))
     // PDF는 줄이지 않고 그대로 보내므로 너무 큰 파일은 뺀다
-    const tooBig = all.filter((f) => isPdf(f) && f.size > MAX_PDF_MB * 1024 * 1024)
-    const files = all.filter((f) => !tooBig.includes(f))
-    setMsg(tooBig.length ? { ok: false, text: `${tooBig.map((f) => f.name).join(', ')}: PDF는 ${MAX_PDF_MB}MB 이하만 올릴 수 있어요.` } : null)
-    setShots((cur) => [...cur, ...files.map((file) => ({ file, name: file.name, url: URL.createObjectURL(file), pdf: isPdf(file) }))].slice(0, MAX))
+    const tooBig = usable.filter((f) => isPdf(f) && f.size > MAX_PDF_MB * 1024 * 1024)
+    const files = usable.filter((f) => !tooBig.includes(f)).slice(0, MAX - shots.length)
+    const notes = [
+      tooBig.length > 0 && `${tooBig.map((f) => f.name).join(', ')}: PDF는 ${MAX_PDF_MB}MB 이하만 올릴 수 있어요.`,
+      usable.length < all.length && '사진·PDF가 아닌 파일은 뺐어요.',
+    ].filter(Boolean)
+    setMsg(notes.length ? { ok: false, text: notes.join(' ') } : null)
+    const next = [...shots, ...files.map((file) => ({ file, name: file.name, url: URL.createObjectURL(file), pdf: isPdf(file) }))]
+    setShots(next)
+    return next
   }
+
+  function onPick(e: ChangeEvent<HTMLInputElement>) {
+    addFiles([...(e.target.files ?? [])])
+    e.target.value = ''
+  }
+
+  // 끌어다 놓은 파일은 설정을 다 읽은 뒤 한 번만 받아서 바로 읽는다
+  const handled = useRef<number | null>(null)
+  useEffect(() => {
+    if (!incoming || !ctx || busy || handled.current === incoming.id) return
+    handled.current = incoming.id
+    if (drafts) {
+      setMsg({ ok: false, text: '지금 읽은 서류를 먼저 처리하거나 [처음부터]를 누른 뒤 다시 놓아 주세요.' })
+      return
+    }
+    const next = addFiles(incoming.files)
+    // 사진·PDF가 아닌 파일을 뺐다는 안내는 남겨 둔다
+    if (next.length) read(next, true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incoming, ctx])
 
   function reset() {
     shots.forEach((s) => URL.revokeObjectURL(s.url))
@@ -46,14 +78,14 @@ export function ReceiptPanel({ onMood }: { onMood?: (s: MoniState, ms?: number) 
     setDrafts(null)
   }
 
-  async function read() {
+  async function read(list: Shot[] = shots, keepMsg = false) {
     if (!ctx) return
     setBusy('read')
-    setMsg(null)
-    onMood?.('thinking')
+    if (!keepMsg) setMsg(null)
+    onMood?.('reading')
     try {
-      const result = await readReceipts(shots.map((s) => s.file), ctx)
-      setDrafts(shots.map((s, i) => toDraft(result.find((r) => r.image_index === i), s, `${i}-${s.name}`, ctx)))
+      const result = await readReceipts(list.map((s) => s.file), ctx)
+      setDrafts(list.map((s, i) => toDraft(result.find((r) => r.image_index === i), s, `${i}-${s.name}`, ctx)))
       onMood?.('speaking', 900)
     } catch (e) {
       setMsg({ ok: false, text: (e as Error).message })
@@ -125,7 +157,7 @@ export function ReceiptPanel({ onMood }: { onMood?: (s: MoniState, ms?: number) 
           )}
           <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
             <span className="text-[13px] text-body">AI가 읽은 내용은 다음 화면에서 확인·수정한 뒤에만 저장돼요.</span>
-            <button onClick={read} disabled={!shots.length || !ctx || busy !== null} className={BTN_PRIMARY}>
+            <button onClick={() => read()} disabled={!shots.length || !ctx || busy !== null} className={BTN_PRIMARY}>
               {busy === 'read' ? <Loader2 aria-hidden size={18} className="animate-spin" /> : <Sparkles aria-hidden size={18} />}
               {busy === 'read' ? '모니가 읽는 중…' : `AI로 읽기${shots.length ? ` (${shots.length}개)` : ''}`}
             </button>

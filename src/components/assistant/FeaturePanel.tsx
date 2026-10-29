@@ -7,9 +7,15 @@ import { NoticePanel } from './NoticePanel'
 import { ReceiptPanel } from './ReceiptPanel'
 import { SlackPanel } from './SlackPanel'
 
-type Props = { feature: FeatureKey; onBack: () => void; onMood?: (s: MoniState, ms?: number) => void }
+type Props = {
+  feature: FeatureKey
+  onBack: () => void
+  onMood?: (s: MoniState, ms?: number) => void
+  /** 모니 화면에 끌어다 놓은 파일 (id가 바뀔 때마다 새로 받음) */
+  incoming?: { id: number; files: File[] } | null
+}
 
-export function FeaturePanel({ feature, onBack, onMood }: Props) {
+export function FeaturePanel({ feature, onBack, onMood, incoming }: Props) {
   const f = FEATURES.find((x) => x.key === feature)!
   // 대화창·문장 화면은 자체적으로 아래까지 채우므로 바깥 스크롤을 쓰지 않는다
   const fills = feature === 'consult' || feature === 'notice'
@@ -22,7 +28,7 @@ export function FeaturePanel({ feature, onBack, onMood }: Props) {
         <button onClick={onBack} className={BTN}><ArrowLeft aria-hidden size={18} /> 모니에게 돌아가기</button>
       </div>
       <div className={`min-h-0 flex-1 ${fills ? 'flex flex-col' : 'overflow-y-auto'}`}>
-        {feature === 'receipt' && <ReceiptPanel onMood={onMood} />}
+        {feature === 'receipt' && <ReceiptPanel onMood={onMood} incoming={incoming} />}
         {feature === 'slack' && <SlackPanel onMood={onMood} />}
         {feature === 'consult' && <ConsultPanel onMood={onMood} />}
         {feature === 'notice' && <NoticePanel onMood={onMood} />}

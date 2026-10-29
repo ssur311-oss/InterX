@@ -3,7 +3,7 @@ import * as THREE from 'three'
 import { RotateCcw } from 'lucide-react'
 import { buildMoni } from './moni/buildMoni'
 import { frameCamera, prepareDecorFade } from './moni/moniFrame'
-import { createMotion, step, type Motion, type MoniState } from './moni/moniMotion'
+import { createMotion, step, trigger, type Motion, type MoniState } from './moni/moniMotion'
 
 export type { MoniState }
 
@@ -30,6 +30,14 @@ const GROW = 1.35
 const SETTLE_MS = 180
 // 도착 후 새 위치 기준 커서 목표로 넘어가는 시간
 const HANDOFF_MS = 350
+// 모니터 윗부분(화면 위 테두리·윗면)을 '머리'로 본다. 모니터 몸통 기준 높이, 몸통 꼭대기는 1.79
+const HEAD_ZONE_Y = 1.55
+// 머리 위에서 좌우로 이만큼(px) 문지르면 쓰다듬기. 잠깐 멈추면 처음부터 다시 잰다
+const PET_PX = 80
+const PET_GAP_MS = 300
+// 이 시간 안에 이만큼 누르면 어지러워한다
+const DIZZY_CLICKS = 4
+const DIZZY_WINDOW_MS = 1500
 
 // 개발 모드 확인용 숫자 (재마운트·renderer 재생성·루프 중복 확인)
 const devStats = { setups: 0, renderers: 0, loops: 0, reallocs: 0, resizes: 0 }
@@ -157,14 +165,54 @@ export function AiAssistantCharacter({ state = 'idle', paused = false, pointerTr
         y: THREE.MathUtils.clamp((cy - r.top - r.height / 2) / sy, -1, 1),
       }
     }
+    // 커서가 모니 머리 위에 있는지: 화면 좌표 → 3D 광선으로 모니터에 닿는 점의 높이를 본다
+    const raycaster = new THREE.Raycaster()
+    const ndc = new THREE.Vector2()
+    const local = new THREE.Vector3()
+    const onHead = (cx: number, cy: number) => {
+      const r = el.getBoundingClientRect()
+      if (cx < r.left || cx > r.right || cy < r.top || cy > r.bottom) return false
+      ndc.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1)
+      raycaster.setFromCamera(ndc, moni.camera)
+      const hit = raycaster.intersectObject(moni.monitorGroup, true)[0]
+      if (!hit) return false
+      moni.monitorGroup.worldToLocal(local.copy(hit.point))
+      return local.y > HEAD_ZONE_Y
+    }
+    const stroke = { x: 0, dist: 0, at: 0 }
+    let clicks: number[] = []
+    // 쓰다듬기·여러 번 누르기는 보기만 하는 반응이라 캐릭터 안에서 바로 처리한다
+    const react = (e: PointerEvent, now: number) => {
+      if (e.type === 'pointerdown') {
+        const r = el.getBoundingClientRect()
+        if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return
+        clicks = [...clicks.filter((c) => now - c < DIZZY_WINDOW_MS), now]
+        if (clicks.length >= DIZZY_CLICKS) {
+          clicks = []
+          trigger(motion, 'dizzy')
+        }
+        return
+      }
+      if (!onHead(e.clientX, e.clientY)) {
+        stroke.dist = 0
+        return
+      }
+      stroke.dist = now - stroke.at > PET_GAP_MS ? 0 : stroke.dist + Math.abs(e.clientX - stroke.x)
+      stroke.x = e.clientX
+      stroke.at = now
+      if (stroke.dist > PET_PX && motion.reaction !== 'dizzy') trigger(motion, 'petted')
+    }
+
     let lastClient: { x: number; y: number } | null = null
     let wasMoving = false
     // 도착 직후 새 위치 기준 목표로 천천히 넘어가는 중이면 값이 있다
     let handoff: { from: { x: number; y: number }; to: { x: number; y: number }; start: number } | null = null
     const onPointer = (e: PointerEvent) => {
+      const now = performance.now()
       lastClient = { x: e.clientX, y: e.clientY }
       motion.pointerActive = true
-      motion.lastInputMs = performance.now()
+      motion.lastInputMs = now
+      if (!props.current.paused) react(e, now)
       // 상자가 움직이는 동안에는 기준점이 계속 바뀌어 고개가 튀므로 목표를 붙잡아 둔다
       if (props.current.moving) return
       const aim = aimAt(e.clientX, e.clientY)
@@ -182,8 +230,13 @@ export function AiAssistantCharacter({ state = 'idle', paused = false, pointerTr
       motion.pointer.x = 0
       motion.pointer.y = 0
     }
+    // 상담 창에 글을 쓰는 동안 졸지 않도록 키보드 입력도 깨어 있는 신호로 본다
+    const onKey = () => {
+      motion.lastInputMs = performance.now()
+    }
     window.addEventListener('pointermove', onPointer, { passive: true })
     window.addEventListener('pointerdown', onPointer, { passive: true })
+    window.addEventListener('keydown', onKey, { passive: true })
     document.documentElement.addEventListener('pointerleave', onLeave)
     window.addEventListener('blur', onLeave)
 
@@ -243,6 +296,7 @@ export function AiAssistantCharacter({ state = 'idle', paused = false, pointerTr
       io.disconnect()
       window.removeEventListener('pointermove', onPointer)
       window.removeEventListener('pointerdown', onPointer)
+      window.removeEventListener('keydown', onKey)
       document.documentElement.removeEventListener('pointerleave', onLeave)
       window.removeEventListener('blur', onLeave)
       canvas.removeEventListener('webglcontextlost', onLost)

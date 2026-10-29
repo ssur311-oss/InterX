@@ -42,7 +42,7 @@ export function SlackPanel({ onMood }: { onMood?: (s: MoniState, ms?: number) =>
     setBusy('read')
     setMsg(null)
     reset()
-    onMood?.('thinking')
+    onMood?.('reading')
     try {
       const r = await readSlack(message, sender.name, mine, today)
       setResult(r)
